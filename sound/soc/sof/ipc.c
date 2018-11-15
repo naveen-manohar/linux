@@ -736,6 +736,44 @@ int snd_sof_dsp_mailbox_init(struct snd_sof_dev *sdev, u32 dspbox,
 }
 EXPORT_SYMBOL(snd_sof_dsp_mailbox_init);
 
+int snd_sof_ipc_valid(struct snd_sof_dev *sdev)
+{
+	struct sof_ipc_fw_ready *ready = &sdev->fw_ready;
+	struct sof_ipc_fw_version *v = &ready->version;
+
+	dev_info(sdev->dev,
+		 " Firmware info: version %d:%d:%d-%s\n",  v->major, v->minor,
+		 v->micro, v->tag);
+	dev_info(sdev->dev,
+		 " Firmware: ABI %d:%d:%d Kernel ABI %d:%d:%d\n",
+		 SOF_ABI_VERSION_MAJOR(v->abi_version),
+		 SOF_ABI_VERSION_MINOR(v->abi_version),
+		 SOF_ABI_VERSION_PATCH(v->abi_version),
+		 SOF_ABI_MAJOR, SOF_ABI_MINOR, SOF_ABI_PATCH);
+
+	if (SOF_ABI_VERSION_INCOMPATIBLE(SOF_ABI_VERSION, v->abi_version)) {
+		dev_err(sdev->dev, "error: incompatible FW ABI version\n");
+		return -EINVAL;
+	}
+
+	if (ready->debug.build) {
+		dev_info(sdev->dev,
+			 " Firmware debug build %d on %s-%s - options:\n"
+			 "  lock debug: %s\n"
+			 "  lock vdebug: %s\n",
+			 v->build, v->date, v->time,
+			 ready->debug.locks ? "on" : "off",
+			 ready->debug.locks_verbose ? "on" : "off");
+	}
+
+	/* only copy the fw_version into debugfs at first boot */
+	if (sdev->first_boot)
+		memcpy(&sdev->fw_version, v, sizeof(*v));
+
+	return 0;
+}
+EXPORT_SYMBOL(snd_sof_ipc_valid);
+
 struct snd_sof_ipc *snd_sof_ipc_init(struct snd_sof_dev *sdev)
 {
 	struct snd_sof_ipc *ipc;
