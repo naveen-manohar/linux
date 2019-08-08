@@ -1,4 +1,5 @@
 ccflags-y += -DDEBUG
+EXTRA_CFLAGS += -DDEBUG
 
 # SPDX-License-Identifier: GPL-2.0
 snd-soc-88pm860x-objs := 88pm860x-codec.o

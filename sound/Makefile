@@ -1,3 +1,5 @@
+ccflags-y += -DDEBUG
+EXTRA_CFLAGS += -DDEBUG
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for the Linux sound card driver
 #

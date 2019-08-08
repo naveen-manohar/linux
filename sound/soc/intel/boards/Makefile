@@ -1,4 +1,5 @@
 ccflags-y += -DDEBUG
+EXTRA_CFLAGS += -DDEBUG
 
 # SPDX-License-Identifier: GPL-2.0
 snd-soc-sst-haswell-objs := haswell.o
