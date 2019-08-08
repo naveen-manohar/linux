@@ -326,6 +326,14 @@ int hda_dsp_cl_boot_firmware(struct snd_sof_dev *sdev)
 		goto cleanup;
 	}
 
+	ret = snd_sof_dsp_read(sdev, HDA_DSP_BAR,
+			HDA_DSP_SRAM_REG_ROM_STATUS);
+			dev_dbg(sdev->dev, "naveen DSP status %x", ret);
+	msleep(1000);
+	ret = snd_sof_dsp_read(sdev, HDA_DSP_BAR,
+			HDA_DSP_SRAM_REG_ROM_STATUS);
+			dev_dbg(sdev->dev, "naveen DSP status %x", ret);
+
 	/*
 	 * at this point DSP ROM has been initialized and
 	 * should be ready for code loading and firmware boot
