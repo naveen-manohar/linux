@@ -123,11 +123,10 @@ static bool rt700_volatile_register(struct device *dev, unsigned int reg)
 	case 0x202d ... 0x202f: /* BRA */
 	case 0x2201 ... 0x2212: /* i2c debug */
 	case 0x2220 ... 0x2223: /* decoded HD-A */
-		return true;
 	case 0x3000 ... 0xffff: /* HD-A command */
-		return false; /* should always read from cache */
+		return true;
 	default:
-		return true; /*for debug*/
+		return false;
 	}
 }
 

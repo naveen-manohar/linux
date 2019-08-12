@@ -583,6 +583,9 @@ static unsigned int rt700_button_detect(struct rt700_priv *rt700)
 	rt700_index_read(rt700->regmap, RT700_IRQ_FLAG_TABLE1, &val80);
 	rt700_index_read(rt700->regmap, RT700_IRQ_FLAG_TABLE2, &val81);
 
+	val80 &= 0x0381;
+	val81 &= 0xff00;
+
 	switch (val80) {
 	case 0x0200:
 	case 0x0100:
@@ -625,7 +628,7 @@ int rt700_jack_detect(struct rt700_priv *rt700, bool *hp, bool *mic)
 		rt700_index_read(rt700->regmap, RT700_COMBO_JACK_AUTO_CTL2, &buf);
 
 		while ((buf & RT700_COMBOJACK_AUTO_DET_STATUS) == 0) {
-			if (loop >= 10) {
+			if (loop >= 200) {
 				pr_debug("%s, jack auto detection time-out!\n",
 								__func__);
 				return 0;
@@ -725,10 +728,12 @@ static int rt700_set_amp_gain_put(struct snd_kcontrol *kcontrol,
 		val_ll |= read_ll;
 	}
 
-	/* R Channel */
-	if (mc->invert) {
+	if (dapm->bias_level <= SND_SOC_BIAS_STANDBY)
 		regmap_write(rt700->regmap,
 			     RT700_SET_AUDIO_POWER_STATE, AC_PWRST_D0);
+
+	/* R Channel */
+	if (mc->invert) {
 		/* for mute */
 		val_lr = (mc->max - ucontrol->value.integer.value[1]) << 7;
 		/* keep gain */
@@ -865,11 +870,19 @@ static int rt700_mux_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_component *component =
 		snd_soc_dapm_kcontrol_component(kcontrol);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int reg, val;
+	unsigned int reg, val, nid;
 
-	/* nid = e->reg, vid = 0xf01 */
-	reg = RT700_VERB_GET_CONNECT_SEL | e->reg;
+	if (!strcmp("HPO Mux", ucontrol->id.name))
+		nid = RT700_HP_OUT;
+	else if (!strcmp("ADC 22 Mux", ucontrol->id.name))
+		nid = RT700_MIXER_IN1;
+	else if (!strcmp("ADC 23 Mux", ucontrol->id.name))
+		nid = RT700_MIXER_IN2;
+	else
+		return -EINVAL;
+
+	/* vid = 0xf01 */
+	reg = RT700_VERB_GET_CONNECT_SEL | nid;
 	/* FIXME: PLB: check return status on read/write */
 	snd_soc_component_write(component, reg, 0x0);
 	snd_soc_component_read(component, RT700_READ_HDA_0, &val);
@@ -887,16 +900,24 @@ static int rt700_mux_put(struct snd_kcontrol *kcontrol,
 				snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int *item = ucontrol->value.enumerated.item;
-	unsigned int val, val2, change, reg;
-	struct snd_soc_dapm_update update;
+	unsigned int val, val2, change, reg, nid;
 
 	if (item[0] >= e->items)
 		return -EINVAL;
 
-	/* Verb ID = 0x701h, nid = e->reg */
+	if (!strcmp("HPO Mux", ucontrol->id.name))
+		nid = RT700_HP_OUT;
+	else if (!strcmp("ADC 22 Mux", ucontrol->id.name))
+		nid = RT700_MIXER_IN1;
+	else if (!strcmp("ADC 23 Mux", ucontrol->id.name))
+		nid = RT700_MIXER_IN2;
+	else
+		return -EINVAL;
+
+	/* Verb ID = 0x701h */
 	val = snd_soc_enum_item_to_val(e, item[0]) << e->shift_l;
 
-	reg = RT700_VERB_GET_CONNECT_SEL | e->reg;
+	reg = RT700_VERB_GET_CONNECT_SEL | nid;
 	/* FIXME: PLB: check return status on read/write */
 	snd_soc_component_write(component, reg, 0x0);
 	snd_soc_component_read(component, RT700_READ_HDA_0, &val2);
@@ -906,14 +927,10 @@ static int rt700_mux_put(struct snd_kcontrol *kcontrol,
 		change = 1;
 
 	if (change) {
-		reg = RT700_VERB_SET_CONNECT_SEL | e->reg;
+		reg = RT700_VERB_SET_CONNECT_SEL | nid;
 		snd_soc_component_write(component, reg, val);
-		update.kcontrol = kcontrol;
-		update.reg = e->reg;
-		update.mask = 0xff;
-		update.val = val;
 		snd_soc_dapm_mux_update_power(dapm, kcontrol,
-					      item[0], e, &update);
+					      item[0], e, NULL);
 	}
 
 	return change;
@@ -927,10 +944,10 @@ static const char * const adc_mux_text[] = {
 };
 
 static SOC_ENUM_SINGLE_DECL(
-	rt700_adc22_enum, RT700_MIXER_IN1, 0, adc_mux_text);
+	rt700_adc22_enum, SND_SOC_NOPM, 0, adc_mux_text);
 
 static SOC_ENUM_SINGLE_DECL(
-	rt700_adc23_enum, RT700_MIXER_IN2, 0, adc_mux_text);
+	rt700_adc23_enum, SND_SOC_NOPM, 0, adc_mux_text);
 
 static const struct snd_kcontrol_new rt700_adc22_mux =
 	SOC_DAPM_ENUM_EXT("ADC 22 Mux", rt700_adc22_enum,
@@ -945,11 +962,88 @@ static const char * const out_mux_text[] = {
 	"Surround",
 };
 
-static SOC_ENUM_SINGLE_DECL(rt700_hp_enum, RT700_HP_OUT, 0, out_mux_text);
+static SOC_ENUM_SINGLE_DECL(
+	rt700_hp_enum, SND_SOC_NOPM, 0, out_mux_text);
 
 static const struct snd_kcontrol_new rt700_hp_mux =
 	SOC_DAPM_ENUM_EXT("HP Mux", rt700_hp_enum,
 			  rt700_mux_get, rt700_mux_put);
+
+static int rt700_dac_front_event(struct snd_soc_dapm_widget *w,
+	struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_component *component =
+		snd_soc_dapm_to_component(w->dapm);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_DAC1, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_DAC1, 0x00);
+		break;
+	}
+	return 0;
+}
+
+static int rt700_dac_surround_event(struct snd_soc_dapm_widget *w,
+	struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_component *component =
+		snd_soc_dapm_to_component(w->dapm);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_DAC2, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_DAC2, 0x00);
+		break;
+	}
+	return 0;
+}
+
+static int rt700_adc_09_event(struct snd_soc_dapm_widget *w,
+	struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_component *component =
+		snd_soc_dapm_to_component(w->dapm);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_ADC1, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_ADC1, 0x00);
+		break;
+	}
+	return 0;
+}
+
+static int rt700_adc_08_event(struct snd_soc_dapm_widget *w,
+	struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_component *component =
+		snd_soc_dapm_to_component(w->dapm);
+
+	switch (event) {
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_ADC2, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_component_write(component,
+			RT700_SET_STREAMID_ADC2, 0x00);
+		break;
+	}
+	return 0;
+}
 
 static const struct snd_soc_dapm_widget rt700_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("HP"),
@@ -959,13 +1053,20 @@ static const struct snd_soc_dapm_widget rt700_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("MIC2"),
 	SND_SOC_DAPM_INPUT("LINE1"),
 	SND_SOC_DAPM_INPUT("LINE2"),
-	SND_SOC_DAPM_INPUT("Dummy Input"),
-	SND_SOC_DAPM_DAC("DAC Front", NULL, RT700_SET_STREAMID_DAC1, 4, 0),
-	SND_SOC_DAPM_DAC("DAC Surround", NULL, RT700_SET_STREAMID_DAC2, 4, 0),
+	SND_SOC_DAPM_DAC_E("DAC Front", NULL, SND_SOC_NOPM, 0, 0,
+		rt700_dac_front_event,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_DAC_E("DAC Surround", NULL, SND_SOC_NOPM, 0, 0,
+		rt700_dac_surround_event,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 	SND_SOC_DAPM_MUX("HPO Mux", SND_SOC_NOPM, 0, 0, &rt700_hp_mux),
 	SND_SOC_DAPM_PGA("SPK PGA", SND_SOC_NOPM, 0, 0,	NULL, 0),
-	SND_SOC_DAPM_ADC("ADC 09", NULL, RT700_SET_STREAMID_ADC1, 4, 0),
-	SND_SOC_DAPM_ADC("ADC 08", NULL, RT700_SET_STREAMID_ADC2, 4, 0),
+	SND_SOC_DAPM_ADC_E("ADC 09", NULL, SND_SOC_NOPM, 0, 0,
+		rt700_adc_09_event,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+	SND_SOC_DAPM_ADC_E("ADC 08", NULL, SND_SOC_NOPM, 0, 0,
+		rt700_adc_08_event,
+		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
 	SND_SOC_DAPM_MUX("ADC 22 Mux", SND_SOC_NOPM, 0, 0,
 		&rt700_adc22_mux),
 	SND_SOC_DAPM_MUX("ADC 23 Mux", SND_SOC_NOPM, 0, 0,
@@ -978,9 +1079,7 @@ static const struct snd_soc_dapm_widget rt700_dapm_widgets[] = {
 
 static const struct snd_soc_dapm_route rt700_audio_map[] = {
 	{"DAC Front", NULL, "DP1RX"},
-	{"DAC Front", NULL, "Dummy Input"},
 	{"DAC Surround", NULL, "DP3RX"},
-	{"DAC Surround", NULL, "Dummy Input"},
 	{"DP2TX", NULL, "ADC 09"},
 	{"DP4TX", NULL, "ADC 08"},
 	{"ADC 09", NULL, "ADC 22 Mux"},
