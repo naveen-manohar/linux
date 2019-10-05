@@ -553,7 +553,8 @@ void hda_dsp_ctrl_stop_chip(struct snd_sof_dev *sdev);
 /*
  * HDA bus operations.
  */
-void sof_hda_bus_init(struct hdac_bus *bus, struct device *dev);
+void sof_hda_bus_init(struct hdac_bus *bus, struct device *dev,
+		      const struct hdac_ext_bus_ops *ext_ops);
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
 /*
