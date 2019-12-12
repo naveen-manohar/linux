@@ -1074,7 +1074,7 @@ static void rt5682_jack_detect_handler(struct work_struct *work)
 	struct rt5682_priv *rt5682 =
 		container_of(work, struct rt5682_priv, jack_detect_work.work);
 	int val, btn_type;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	while (!rt5682->component)
 		usleep_range(10000, 15000);
 
@@ -1150,7 +1150,7 @@ static void rt5682_jack_detect_handler(struct work_struct *work)
 		else
 			cancel_delayed_work_sync(&rt5682->jd_check_work);
 	}
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	mutex_unlock(&rt5682->calibrate_mutex);
 }
 
@@ -2365,6 +2365,7 @@ static int rt5682_probe(struct snd_soc_component *component)
 	struct rt5682_priv *rt5682 = snd_soc_component_get_drvdata(component);
 
 	rt5682->component = component;
+//	rt5682_headset_detect(rt5682->component, 1);
 
 	return 0;
 }
