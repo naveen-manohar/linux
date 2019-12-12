@@ -75,6 +75,10 @@ static int rt5682_update_status(struct sdw_slave *slave,
 	if (rt5682->hw_init || rt5682->status != SDW_SLAVE_ATTACHED)
 		return 0;
 
+	printk("naveen %s %d\n", __func__, __LINE__);
+
+	mod_delayed_work(system_power_efficient_wq, &rt5682->jack_detect_work, msecs_to_jiffies(250));
+
 	/* perform I/O transfers required for Slave initialization */
 	return rt5682_io_init(&slave->dev, slave);
 }
@@ -217,7 +221,7 @@ static int rt5682_interrupt_callback(struct sdw_slave *slave,
 					struct sdw_slave_intr_status *status)
 {
 	struct rt5682_priv *rt5682 = dev_get_drvdata(&slave->dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	dev_dbg(&slave->dev,
 		"%s control_port_stat=%x", __func__, status->control_port);
 
@@ -225,7 +229,7 @@ static int rt5682_interrupt_callback(struct sdw_slave *slave,
 		mod_delayed_work(system_power_efficient_wq,
 			&rt5682->jack_detect_work, msecs_to_jiffies(250));
 	}
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
