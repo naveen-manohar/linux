@@ -287,6 +287,7 @@ snd-soc-rt711-objs := rt711.o rt711-sdw.o
 snd-soc-rt715-objs := rt715.o rt715-sdw.o
 
 # Amp
+snd-soc-max98373-sdw-objs := max98373-sdw.o
 snd-soc-max9877-objs := max9877.o
 snd-soc-max98504-objs := max98504.o
 snd-soc-simple-amplifier-objs := simple-amplifier.o
@@ -582,6 +583,7 @@ obj-$(CONFIG_SND_SOC_RT711)     += snd-soc-rt711.o
 obj-$(CONFIG_SND_SOC_RT715)     += snd-soc-rt715.o
 
 # Amp
+obj-$(CONFIG_SND_SOC_MAX98373_SDW)   += snd-soc-max98373-sdw.o
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_MAX98504)	+= snd-soc-max98504.o
 obj-$(CONFIG_SND_SOC_SIMPLE_AMPLIFIER)	+= snd-soc-simple-amplifier.o
