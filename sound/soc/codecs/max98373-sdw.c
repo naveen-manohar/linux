@@ -122,7 +122,7 @@ static bool max98373_readable_register(struct device *dev, unsigned int reg)
 	case 0x0040 ... 0x0070:			/* Soundwire Slave Control Port Registers	*/
 	case 0x0100 ... 0x0137:			/* Soundwire Data Port 1 Registers	*/
 	case 0x0300 ... 0x0337:			/* Soundwire Data Port 3 Registers	*/
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	case MAX98373_R2000_SW_RESET:
 	case MAX98373_R2001_INT_RAW1 ... MAX98373_R200C_INT_EN3:
 	case MAX98373_R2010_IRQ_CTRL:
@@ -195,7 +195,7 @@ static void max98373_read_config(struct sdw_slave *slave)
 	int value;
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (!device_property_read_u32(dev, "maxim,vmon-slot-no", &value))
 		max98373->v_slot = value & 0xF;
 	else
@@ -254,7 +254,7 @@ static void max98373_reset(struct sdw_slave *slave)
 	int ret, reg, count;
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Perform IO operations only if slave is in ATTACHED state */
 	if (slave->status != SDW_SLAVE_ATTACHED)
 		return;
@@ -286,7 +286,7 @@ static int max98373_io_init(struct sdw_slave *slave)
 {
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Perform IO operations only if slave is in ATTACHED state */
 	if (slave->status != SDW_SLAVE_ATTACHED)
 		return 0;
@@ -357,7 +357,7 @@ static int max98373_clock_config(struct sdw_slave *slave, struct sdw_bus_params 
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
 	unsigned int clk_freq, value;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	clk_freq = (params->curr_dr_freq >> 1);
 
 	/* Perform IO operations only if slave is in ATTACHED state */
@@ -1102,7 +1102,7 @@ static int max98373_init(struct sdw_slave *slave, struct regmap *regmap)
 	struct max98373_priv *max98373;
 	int ret = 0;
 	struct device *dev = &slave->dev;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
     /*  Allocate and assign private driver data structure  */
 	max98373 = devm_kzalloc(dev, sizeof(*max98373), GFP_KERNEL);
 	if (!max98373)
@@ -1130,6 +1130,7 @@ static int max98373_init(struct sdw_slave *slave, struct regmap *regmap)
 	pm_runtime_put_sync_autosuspend(dev);
 
 	dev_info(dev, "%s\n", __func__);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ret;
 }
 
@@ -1137,6 +1138,7 @@ static int max98373_update_status(struct sdw_slave *slave,
 			       enum sdw_slave_status status)
 {
 	pr_err("In %s\n", __func__);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/*
 	 * Perform initialization only if slave status is SDW_SLAVE_ATTACHED
 	 */
@@ -1144,6 +1146,7 @@ static int max98373_update_status(struct sdw_slave *slave,
 		/* perform I/O transfers required for Slave initialization */
 		max98373_io_init(slave);
 	}
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1190,11 +1193,11 @@ static int max98373_bus_config(struct sdw_slave *slave,
 			    struct sdw_bus_params *params)
 {
 	int ret;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	ret = max98373_clock_config(slave, params);
 	if (ret < 0)
 		dev_err(&slave->dev, "Invalid clk config");
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1202,6 +1205,7 @@ static int max98373_interrupt_callback(struct sdw_slave *slave,
 				    struct sdw_slave_intr_status *status)
 {
 	pr_debug("%s control_port_stat=%x", __func__, status->control_port);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1221,7 +1225,7 @@ static int max98373_sdw_probe(struct sdw_slave *slave,
 {
 	struct regmap *regmap;
 	int ret = 0;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Assign ops */
 	slave->ops = &max98373_slave_ops;
 
@@ -1231,7 +1235,7 @@ static int max98373_sdw_probe(struct sdw_slave *slave,
 		return -EINVAL;
 
 	max98373_init(slave, regmap);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ret;
 }
 
