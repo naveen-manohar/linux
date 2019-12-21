@@ -144,10 +144,10 @@ SECTIONS
 		*(.text.__x86.indirect_thunk)
 		__indirect_thunk_end = .;
 #endif
-	} :text =0xcccc
-
 	/* End of text section, which should occupy whole number of pages */
 	_etext = .;
+	} :text =0xcccc
+
 	. = ALIGN(PAGE_SIZE);
 
 	X86_ALIGN_RODATA_BEGIN
