@@ -510,6 +510,18 @@ static void rt1308_sdw_shutdown(struct snd_pcm_substream *substream,
 	kfree(stream);
 }
 
+static inline int tx_mask_to_ch(int tx_mask)
+{
+	int ch = 0;
+
+	while (tx_mask) {
+		ch += tx_mask & 1;
+		tx_mask >>= 1;
+	}
+
+	return ch;
+}
+
 static int rt1308_sdw_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params, struct snd_soc_dai *dai)
 {
@@ -540,12 +552,20 @@ static int rt1308_sdw_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
+	/*
+	 * machine driver sets tx_mask to split stream channels
+	 * to each codec in multiple-codecs cases
+	 */
+	if (dai->tx_mask)
+		num_channels = tx_mask_to_ch(dai->tx_mask);
+	else
+		num_channels = params_channels(params);
+
 	stream_config.frame_rate = params_rate(params);
-	stream_config.ch_count = params_channels(params);
+	stream_config.ch_count = num_channels;
 	stream_config.bps = snd_pcm_format_width(params_format(params));
 	stream_config.direction = direction;
 
-	num_channels = params_channels(params);
 	port_config.ch_mask = (1 << (num_channels)) - 1;
 	port_config.num = port;
 
