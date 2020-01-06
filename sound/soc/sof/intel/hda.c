@@ -127,7 +127,7 @@ static int hda_sdw_acpi_scan(struct snd_sof_dev *sdev)
 	struct sof_intel_hda_dev *hdev;
 	acpi_handle handle;
 	int ret;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	handle = ACPI_HANDLE(sdev->dev);
 
 	/* save ACPI info for the probe step */
@@ -148,7 +148,7 @@ static int hda_sdw_probe(struct snd_sof_dev *sdev)
 	struct sdw_intel_res res;
 	acpi_handle handle;
 	void *sdw;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	handle = ACPI_HANDLE(sdev->dev);
 
 	hdev = sdev->pdata->hw_pdata;
@@ -613,6 +613,7 @@ static int hda_init_caps(struct snd_sof_dev *sdev)
 
 	/* scan SoundWire capabilities exposed by DSDT */
 	ret = hda_sdw_acpi_scan(sdev);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (ret < 0) {
 		dev_dbg(sdev->dev, "skipping SoundWire, ACPI scan error\n");
 		goto skip_soundwire;
