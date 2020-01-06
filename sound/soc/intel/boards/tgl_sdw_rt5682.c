@@ -169,7 +169,7 @@ static int mc_probe(struct platform_device *pdev)
 	const char *platform_name;
 	struct snd_soc_card *card = &card_rt5682;
 	int ret;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	dev_dbg(&pdev->dev, "Entry %s\n", __func__);
 
 	ctx = devm_kzalloc(&pdev->dev, sizeof(*ctx), GFP_KERNEL);
@@ -196,7 +196,7 @@ static int mc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, card);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ret;
 }
 
