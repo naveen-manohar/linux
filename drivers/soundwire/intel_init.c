@@ -137,12 +137,12 @@ sdw_intel_scan_controller(struct sdw_intel_acpi_info *info)
 			continue;
 		}
 
-		if (!is_link_enabled(acpi_fwnode_handle(adev), i)) {
+/*		if (!is_link_enabled(acpi_fwnode_handle(adev), i)) {
 			dev_dbg(&adev->dev,
 				"Link %d not selected in firmware\n", i);
 			continue;
 		}
-
+*/
 		info->link_mask |= BIT(i);
 	}
 
@@ -197,7 +197,7 @@ static struct sdw_intel_ctx
 	int count;
 	int err;
 	int i;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (!res)
 		return NULL;
 
@@ -239,7 +239,7 @@ static struct sdw_intel_ctx
 	for (i = 0; i < count; i++, link++) {
 		if (link_mask && !(link_mask & BIT(i)))
 			continue;
-
+		printk("naveen %s %d\n", __func__, __LINE__);
 		md = sdw_md_add(&intel_sdw_driver,
 				res->parent,
 				acpi_fwnode_handle(adev),
@@ -264,7 +264,7 @@ static struct sdw_intel_ctx
 
 		list_add_tail(&link->list, &ctx->link_list);
 	}
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ctx;
 
 err:
@@ -285,7 +285,7 @@ sdw_intel_startup_controller(struct sdw_intel_ctx *ctx)
 	u32 caps;
 	u32 link_mask;
 	int i;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (acpi_bus_get_device(ctx->handle, &adev))
 		return -EINVAL;
 
@@ -327,7 +327,7 @@ sdw_intel_startup_controller(struct sdw_intel_ctx *ctx)
 			pm_runtime_get_noresume(link->dev);
 		}
 	}
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -338,7 +338,7 @@ static acpi_status sdw_intel_acpi_cb(acpi_handle handle, u32 level,
 	struct acpi_device *adev;
 	acpi_status status;
 	u64 adr;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	status = acpi_evaluate_integer(handle, METHOD_NAME__ADR, NULL, &adr);
 	if (ACPI_FAILURE(status))
 		return AE_OK; /* keep going */
@@ -359,7 +359,7 @@ static acpi_status sdw_intel_acpi_cb(acpi_handle handle, u32 level,
 	 */
 	if ((adr & GENMASK(31, 28)) >> 28 != SDW_LINK_TYPE)
 		return AE_OK; /* keep going */
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* device found, stop namespace walk */
 	return AE_CTRL_TERMINATE;
 }
@@ -378,14 +378,14 @@ int sdw_intel_acpi_scan(acpi_handle *parent_handle,
 			struct sdw_intel_acpi_info *info)
 {
 	acpi_status status;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	status = acpi_walk_namespace(ACPI_TYPE_DEVICE,
 				     parent_handle, 1,
 				     sdw_intel_acpi_cb,
 				     NULL, info, NULL);
 	if (ACPI_FAILURE(status))
 		return -ENODEV;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return sdw_intel_scan_controller(info);
 }
 EXPORT_SYMBOL_NS(sdw_intel_acpi_scan, SOUNDWIRE_INTEL_INIT);
@@ -402,6 +402,7 @@ EXPORT_SYMBOL_NS(sdw_intel_acpi_scan, SOUNDWIRE_INTEL_INIT);
 struct sdw_intel_ctx
 *sdw_intel_probe(struct sdw_intel_res *res)
 {
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return sdw_intel_probe_controller(res);
 }
 EXPORT_SYMBOL_NS(sdw_intel_probe, SOUNDWIRE_INTEL_INIT);
@@ -413,6 +414,7 @@ EXPORT_SYMBOL_NS(sdw_intel_probe, SOUNDWIRE_INTEL_INIT);
  */
 int sdw_intel_startup(struct sdw_intel_ctx *ctx)
 {
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return sdw_intel_startup_controller(ctx);
 }
 EXPORT_SYMBOL_NS(sdw_intel_startup, SOUNDWIRE_INTEL_INIT);
@@ -424,6 +426,7 @@ EXPORT_SYMBOL_NS(sdw_intel_startup, SOUNDWIRE_INTEL_INIT);
  */
 void sdw_intel_exit(struct sdw_intel_ctx *ctx)
 {
+	printk("naveen %s %d\n", __func__, __LINE__);
 	sdw_intel_cleanup(ctx);
 	driver_unregister(&intel_sdw_driver.driver);
 	kfree(ctx);
