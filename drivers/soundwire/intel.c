@@ -1238,14 +1238,14 @@ static int sdw_master_read_intel_prop(struct sdw_bus *bus)
 	fwnode_property_read_u32(link,
 				 "intel-sdw-ip-clock",
 				 &prop->mclk_freq);
-
+	printk("naveen %s %d %d\n", __func__, prop->mclk_freq, __LINE__);
 	prop->mclk_freq /= 2;
 	fwnode_property_read_u32(link,
 				 "intel-quirk-mask",
 				 &quirk_mask);
 
 	if (quirk_mask & SDW_INTEL_QUIRK_MASK_BUS_DISABLE)
-		prop->hw_disabled = true;
+		prop->hw_disabled = false;
 
 	return 0;
 }
