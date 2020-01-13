@@ -289,7 +289,10 @@ static int max98373_io_init(struct sdw_slave *slave)
 	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Perform IO operations only if slave is in ATTACHED state */
 	if (slave->status != SDW_SLAVE_ATTACHED)
+	{
+		printk("naveen %s %d\n", __func__, __LINE__);
 		return 0;
+	}
 
 	/* Enable Runtime PM */
 	pm_runtime_set_autosuspend_delay(dev, 3000);
@@ -413,7 +416,7 @@ static int max98373_clock_config(struct sdw_slave *slave, struct sdw_bus_params 
 static int max98373_snd_probe(struct snd_soc_component *component)
 {
 	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* IV default slot configuration */
 	regmap_write(max98373->regmap,
 		MAX98373_R2020_PCM_TX_HIZ_EN_1,
@@ -530,7 +533,7 @@ static int max98373_dai_set_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
 	unsigned int format = 0;
 	unsigned int invert = 0;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	dev_dbg(component->dev, "%s: fmt 0x%08X\n", __func__, fmt);
 
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
@@ -598,7 +601,7 @@ static int max98373_set_clock(struct snd_soc_component *component,
 	/* BCLK/LRCLK ratio calculation */
 	int blr_clk_ratio = params_channels(params) * max98373->ch_size;
 	int value;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (!max98373->tdm_mode) {
 		/* BCLK configuration */
 		value = max98373_get_bclk_sel(blr_clk_ratio);
@@ -607,7 +610,7 @@ static int max98373_set_clock(struct snd_soc_component *component,
 				params_format(params));
 			return -EINVAL;
 		}
-
+		printk("naveen %s %d\n", __func__, __LINE__);
 		regmap_update_bits(max98373->regmap,
 			MAX98373_R2026_PCM_CLOCK_RATIO,
 			MAX98373_PCM_CLK_SETUP_BSEL_MASK,
@@ -625,7 +628,7 @@ static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
 	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
 	unsigned int sampling_rate = 0;
 	unsigned int chan_sz = 0;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* pcm mode configuration */
 	switch (snd_pcm_format_width(params_format(params))) {
 	case 16:
@@ -1144,6 +1147,7 @@ static int max98373_update_status(struct sdw_slave *slave,
 	 */
 	if (status == SDW_SLAVE_ATTACHED) {
 		/* perform I/O transfers required for Slave initialization */
+		printk("naveen %s %d\n", __func__, __LINE__);
 		max98373_io_init(slave);
 	}
 	printk("naveen %s %d\n", __func__, __LINE__);
@@ -1157,7 +1161,7 @@ static int max98373_read_prop(struct sdw_slave *slave)
 	u32 bit;
 	unsigned long addr;
 	struct sdw_dpn_prop *dpn;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* set the timeout values */
 
 	prop->source_ports = 0x08;	/* BITMAP: 00001000  Dataport 3 is active */
