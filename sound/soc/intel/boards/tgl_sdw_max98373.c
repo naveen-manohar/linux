@@ -47,21 +47,23 @@ static int card_late_probe(struct snd_soc_card *card)
 
 static const struct snd_soc_dapm_widget widgets[] = {
 	SND_SOC_DAPM_SPK("Speaker", NULL),
+//	SND_SOC_DAPM_SPK("Right Spk", NULL),
 };
 
 static const struct snd_soc_dapm_route map[] = {
 	/* Speakers */
-	{ "Speaker", NULL, "mx8373-1 SPOL" },
-	{ "Speaker", NULL, "mx8373-1 SPOR" },
+//	{ "Left Spk", NULL, "BE_OUT" },
+	{ "Speaker", NULL, "BE_OUT" },
 };
 
 static const struct snd_soc_dapm_route second_speaker_map[] = {
-	{ "Speaker", NULL, "mx8373-2 SPOL" },
-	{ "Speaker", NULL, "mx8373-2 SPOR" },
+	{ "Speaker", NULL, "BE_OUT" },
+//	{ "Speaker", NULL, "BE_OUT" },
 };
 
 static const struct snd_kcontrol_new controls[] = {
 	SOC_DAPM_PIN_SWITCH("Speaker"),
+//	SOC_DAPM_PIN_SWITCH("Speaker"),
 };
 
 static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
@@ -85,12 +87,12 @@ SND_SOC_DAILINK_DEF(sdw0_pin3,
 SND_SOC_DAILINK_DEF(sdw1_pin2,
 	DAILINK_COMP_ARRAY(COMP_CPU("SDW1 Pin2")));
 SND_SOC_DAILINK_DEF(sdw1_codec,
-	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:0:19f:8373:0", "mx8373-aif")));
+	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:3", "max98373-aif1")));
 
 SND_SOC_DAILINK_DEF(sdw2_pin2,
 	DAILINK_COMP_ARRAY(COMP_CPU("SDW2 Pin2")));
 SND_SOC_DAILINK_DEF(sdw2_codec,
-	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0", "mx8373-aif")));
+	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:7", "max98373-aif1")));
 
 
 SND_SOC_DAILINK_DEF(platform,
@@ -98,12 +100,12 @@ SND_SOC_DAILINK_DEF(platform,
 
 static struct snd_soc_codec_conf codec_conf[] = {
 	{
-		.dev_name = "sdw:0:19f:8373:0",
-		.name_prefix = "MX98373",
+		.dev_name = "sdw:1:19f:8373:0:3",
+		.name_prefix = "Right",
 	},
 	{
-		.dev_name = "sdw:1:19f:8373:0",
-		.name_prefix = "MX98373",
+		.dev_name = "sdw:1:19f:8373:0:7",
+		.name_prefix = "Left",
 	},
 
 };
