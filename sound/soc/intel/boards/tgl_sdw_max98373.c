@@ -80,24 +80,25 @@ static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 	return ret;
 }
 
-SND_SOC_DAILINK_DEF(sdw0_pin2,
-	DAILINK_COMP_ARRAY(COMP_CPU("SDW0 Pin2")));
-SND_SOC_DAILINK_DEF(sdw0_pin3,
-	DAILINK_COMP_ARRAY(COMP_CPU("SDW0 Pin3")));
+//SND_SOC_DAILINK_DEF(sdw0_pin2,
+//	DAILINK_COMP_ARRAY(COMP_CPU("SDW0 Pin2")));
+//SND_SOC_DAILINK_DEF(sdw0_pin3,
+//	DAILINK_COMP_ARRAY(COMP_CPU("SDW0 Pin3")));
+
 SND_SOC_DAILINK_DEF(sdw1_pin2,
 	DAILINK_COMP_ARRAY(COMP_CPU("SDW1 Pin2")));
 SND_SOC_DAILINK_DEF(sdw1_codec,
 	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:3", "max98373-aif1")));
 
-SND_SOC_DAILINK_DEF(sdw2_pin2,
-	DAILINK_COMP_ARRAY(COMP_CPU("SDW2 Pin2")));
+SND_SOC_DAILINK_DEF(sdw1_pin3,
+	DAILINK_COMP_ARRAY(COMP_CPU("SDW1 Pin3")));
 SND_SOC_DAILINK_DEF(sdw2_codec,
 	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:7", "max98373-aif1")));
 
 
 SND_SOC_DAILINK_DEF(platform,
 		DAILINK_COMP_ARRAY(COMP_PLATFORM("0000:00:1f.3")));
-
+/*
 static struct snd_soc_codec_conf codec_conf[] = {
 	{
 		.dev_name = "sdw:1:19f:8373:0:3",
@@ -109,16 +110,24 @@ static struct snd_soc_codec_conf codec_conf[] = {
 	},
 
 };
-
+*/
 struct snd_soc_dai_link dailink[] = {
 	{
+		.name = "SDW1-Playback",
+		.id = 2,
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.nonatomic = true,
+		SND_SOC_DAILINK_REG(sdw1_pin2, sdw1_codec, platform),
+	},
+	{
 		.name = "SDW2-Playback",
-		.id = 1,
+		.id = 3,
 		.init = second_spk_init,
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.nonatomic = true,
-		SND_SOC_DAILINK_REG(sdw2_pin2, sdw2_codec, platform),
+		SND_SOC_DAILINK_REG(sdw1_pin3, sdw2_codec, platform),
 	},
 };
 
@@ -134,8 +143,8 @@ static struct snd_soc_card card_mx8373 = {
 	.dapm_routes = map,
 	.num_dapm_routes = ARRAY_SIZE(map),
 	.late_probe = card_late_probe,
-	.codec_conf = codec_conf,
-	.num_configs = ARRAY_SIZE(codec_conf),
+//	.codec_conf = codec_conf,
+//	.num_configs = ARRAY_SIZE(codec_conf),
 };
 
 static int mc_probe(struct platform_device *pdev)
@@ -164,7 +173,7 @@ static int mc_probe(struct platform_device *pdev)
 
 	snd_soc_card_set_drvdata(card, ctx);
 	card->num_links = ARRAY_SIZE(dailink) - 1 ;
-	card->num_configs = ARRAY_SIZE(codec_conf) - 1;
+//	card->num_configs = ARRAY_SIZE(codec_conf) - 1;
 
 	/* Register the card */
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
