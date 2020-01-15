@@ -46,24 +46,24 @@ static int card_late_probe(struct snd_soc_card *card)
 #endif
 
 static const struct snd_soc_dapm_widget widgets[] = {
-	SND_SOC_DAPM_SPK("Speaker", NULL),
-//	SND_SOC_DAPM_SPK("Right Spk", NULL),
+	SND_SOC_DAPM_SPK("Left Spk", NULL),
+	SND_SOC_DAPM_SPK("Right Spk", NULL),
 };
 
 static const struct snd_soc_dapm_route map[] = {
 	/* Speakers */
-//	{ "Left Spk", NULL, "BE_OUT" },
-	{ "Speaker", NULL, "BE_OUT" },
+	{ "Left Spk", NULL, "Left BE_OUT" },
+	{ "Right Spk", NULL, "Right BE_OUT" },
 };
 
-static const struct snd_soc_dapm_route second_speaker_map[] = {
-	{ "Speaker", NULL, "BE_OUT" },
+//static const struct snd_soc_dapm_route second_speaker_map[] = {
 //	{ "Speaker", NULL, "BE_OUT" },
-};
+//	{ "Speaker", NULL, "BE_OUT" },
+//};
 
 static const struct snd_kcontrol_new controls[] = {
-	SOC_DAPM_PIN_SWITCH("Speaker"),
-//	SOC_DAPM_PIN_SWITCH("Speaker"),
+	SOC_DAPM_PIN_SWITCH("Left Spk"),
+	SOC_DAPM_PIN_SWITCH("Right Spk"),
 };
 
 static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
@@ -71,8 +71,8 @@ static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	int ret;
 	printk("naveen %s %d\n", __func__, __LINE__);
-	ret = snd_soc_dapm_add_routes(&card->dapm, second_speaker_map,
-				      ARRAY_SIZE(second_speaker_map));
+	ret = snd_soc_dapm_add_routes(&card->dapm, map,
+				      ARRAY_SIZE(map));
 
 	if (ret)
 		dev_err(rtd->dev, "second Speaker map addition failed: %d\n",
