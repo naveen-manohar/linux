@@ -38,6 +38,7 @@ struct hdmi_pcm {
 	int device;
 };
 
+
 #define NAME_SIZE	32
 static int card_late_probe(struct snd_soc_card *card)
 {
@@ -46,14 +47,14 @@ static int card_late_probe(struct snd_soc_card *card)
 #endif
 
 static const struct snd_soc_dapm_widget widgets[] = {
-	SND_SOC_DAPM_SPK("Left Spk", NULL),
-	SND_SOC_DAPM_SPK("Right Spk", NULL),
+	SND_SOC_DAPM_SPK("Speaker", NULL),
+//	SND_SOC_DAPM_SPK("Right Spk", NULL),
 };
 
 static const struct snd_soc_dapm_route map[] = {
 	/* Speakers */
-	{ "Left Spk", NULL, "Left BE_OUT" },
-	{ "Right Spk", NULL, "Right BE_OUT" },
+	{ "Speaker", NULL, "Left BE_OUT" },
+	{ "Speaker", NULL, "Right BE_OUT" },
 };
 
 //static const struct snd_soc_dapm_route second_speaker_map[] = {
@@ -62,10 +63,11 @@ static const struct snd_soc_dapm_route map[] = {
 //};
 
 static const struct snd_kcontrol_new controls[] = {
-	SOC_DAPM_PIN_SWITCH("Left Spk"),
-	SOC_DAPM_PIN_SWITCH("Right Spk"),
+	SOC_DAPM_PIN_SWITCH("Speaker"),
+//	SOC_DAPM_PIN_SWITCH("Right Spk"),
 };
 
+/*
 static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
@@ -79,6 +81,7 @@ static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 			ret);
 	return ret;
 }
+*/
 
 //SND_SOC_DAILINK_DEF(sdw0_pin2,
 //	DAILINK_COMP_ARRAY(COMP_CPU("SDW0 Pin2")));
@@ -88,6 +91,7 @@ static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 SND_SOC_DAILINK_DEF(sdw1_pin2,
 	DAILINK_COMP_ARRAY(COMP_CPU("SDW1 Pin2")));
 SND_SOC_DAILINK_DEF(sdw1_codec,
+//	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:3", "max98373-aif1")));
 	DAILINK_COMP_ARRAY(COMP_CODEC("sdw:1:19f:8373:0:3", "max98373-aif1"),
 			COMP_CODEC("sdw:1:19f:8373:0:7", "max98373-aif1")));
 
@@ -96,11 +100,11 @@ SND_SOC_DAILINK_DEF(platform,
 
 static struct snd_soc_codec_conf codec_conf[] = {
 	{
-		.dev_name = "sdw:1:19f:8373:0:3",
+		.dlc = COMP_CODEC_CONF("sdw:1:19f:8373:0:3"),
 		.name_prefix = "Right",
 	},
 	{
-		.dev_name = "sdw:1:19f:8373:0:7",
+		.dlc = COMP_CODEC_CONF("sdw:1:19f:8373:0:7"),
 		.name_prefix = "Left",
 	},
 
@@ -128,7 +132,7 @@ static struct snd_soc_card card_mx8373 = {
 	.num_dapm_widgets = ARRAY_SIZE(widgets),
 	.dapm_routes = map,
 	.num_dapm_routes = ARRAY_SIZE(map),
-	.late_probe = card_late_probe,
+//	.late_probe = card_late_probe,
 	.codec_conf = codec_conf,
 	.num_configs = ARRAY_SIZE(codec_conf),
 };
@@ -152,24 +156,27 @@ static int mc_probe(struct platform_device *pdev)
 	/* override platform name, if required */
 	mach = (&pdev->dev)->platform_data;
 	platform_name = mach->mach_params.platform;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	ret = snd_soc_fixup_dai_links_platform_name(card, platform_name);
-	if (ret)
+	if (ret) {
+		printk("naveen %s %d\n", __func__, __LINE__);
 		return ret;
-
+	}
+	printk("naveen %s %d\n", __func__, __LINE__);
 	snd_soc_card_set_drvdata(card, ctx);
-//	card->num_links = ARRAY_SIZE(dailink) - 1 ;
-//	card->num_configs = ARRAY_SIZE(codec_conf) - 1;
-
+	card->num_links = ARRAY_SIZE(dailink) - 1 ;
+	card->num_configs = ARRAY_SIZE(codec_conf) - 1;
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Register the card */
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (ret) {
 		dev_err(card->dev, "snd_soc_register_card failed %d\n", ret);
 		return ret;
 	}
 
 	platform_set_drvdata(pdev, card);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ret;
 }
 
