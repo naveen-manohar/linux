@@ -199,8 +199,8 @@ static inline int snd_sof_dsp_set_power_state(struct snd_sof_dev *sdev,
 	if (sof_ops(sdev)->set_power_state)
 		return sof_ops(sdev)->set_power_state(sdev, substate);
 
-	/* D0 substate is not supported */
-	return -ENOTSUPP;
+	/* D0 substate is not supported, do nothing here. */
+	return 0;
 }
 
 /* debug */
