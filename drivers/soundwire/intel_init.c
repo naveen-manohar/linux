@@ -73,11 +73,8 @@ static int sdw_intel_cleanup(struct sdw_intel_ctx *ctx)
 			continue;
 
 		if (!IS_ERR_OR_NULL(link->md)) {
-			ret = sdw_master_device_del(link->md);
-			if (ret < 0)
-				dev_err(&link->md->dev,
-					"master device del failed %d\n",
-					ret);
+			pm_runtime_disable(&link->md->dev);
+			device_unregister(&link->md->dev);
 		}
 
 		if (!link->clock_stop_quirks)
