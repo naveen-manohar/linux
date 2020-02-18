@@ -30,6 +30,8 @@ static int ctrl_link_mask;
 module_param_named(sdw_link_mask, ctrl_link_mask, int, 0444);
 MODULE_PARM_DESC(sdw_link_mask, "Intel link mask (one bit per link)");
 
+// FIX_ME: Current Volteer Coreboot lacks SNDW link & Properties configuration
+#if 0
 static bool is_link_enabled(struct fwnode_handle *fw_node, int i)
 {
 	struct fwnode_handle *link;
@@ -53,6 +55,7 @@ static bool is_link_enabled(struct fwnode_handle *fw_node, int i)
 
 	return true;
 }
+#endif
 
 static int sdw_intel_cleanup(struct sdw_intel_ctx *ctx)
 {
@@ -140,11 +143,14 @@ sdw_intel_scan_controller(struct sdw_intel_acpi_info *info)
 			continue;
 		}
 
+// FIX_ME: Current Volteer Coreboot lacks SNDW link & Properties configuration
+#if 0
 		if (!is_link_enabled(acpi_fwnode_handle(adev), i)) {
 			dev_dbg(&adev->dev,
 				"Link %d not selected in firmware\n", i);
 			continue;
 		}
+#endif
 
 		info->link_mask |= BIT(i);
 	}
