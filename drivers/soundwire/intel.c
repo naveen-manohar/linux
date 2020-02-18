@@ -1349,8 +1349,9 @@ static int sdw_master_read_intel_prop(struct sdw_bus *bus)
 				 "intel-quirk-mask",
 				 &quirk_mask);
 
+// FIX_ME: Current Volteer Coreboot lacks SNDW link & Properties configuration
 	if (quirk_mask & SDW_INTEL_QUIRK_MASK_BUS_DISABLE)
-		prop->hw_disabled = true;
+		prop->hw_disabled = false;
 
 	return 0;
 }
