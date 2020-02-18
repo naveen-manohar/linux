@@ -352,7 +352,12 @@
 
 /* Number of DAIs */
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA)
-#define SOF_SKL_NUM_DAIS		14
+
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA_PROBES)
+#define SOF_SKL_NUM_DAIS               16
+#else
+#define SOF_SKL_NUM_DAIS		15
+#endif
 #else
 #define SOF_SKL_NUM_DAIS		8
 #endif
