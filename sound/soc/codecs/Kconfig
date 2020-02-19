@@ -919,7 +919,7 @@ config SND_SOC_RL6231
 	default y if SND_SOC_RT5670=y
 	default y if SND_SOC_RT5677=y
 	default y if SND_SOC_RT5682=y
-	imply SND_SOC_RT5682_SDW
+	default y if SND_SOC_RT5682_SDW=y
 	default y if SND_SOC_RT1011=y
 	default y if SND_SOC_RT1015=y
 	default y if SND_SOC_RT1305=y
