@@ -919,6 +919,7 @@ config SND_SOC_RL6231
 	default y if SND_SOC_RT5670=y
 	default y if SND_SOC_RT5677=y
 	default y if SND_SOC_RT5682=y
+	imply SND_SOC_RT5682_SDW
 	default y if SND_SOC_RT1011=y
 	default y if SND_SOC_RT1015=y
 	default y if SND_SOC_RT1305=y
@@ -961,6 +962,12 @@ config SND_SOC_RT286
 config SND_SOC_RT298
 	tristate
 	depends on I2C
+
+config SND_SOC_RT5682_SDW
+	tristate "Realtek RT5682 Codec - SDW"
+	depends on SOUNDWIRE
+	select SND_SOC_RT5682
+	select REGMAP_SOUNDWIRE
 
 config SND_SOC_RT1011
 	tristate
