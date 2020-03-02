@@ -42,6 +42,7 @@ struct card_private {
 	char codec_name[SND_ACPI_I2C_ID_LEN];
 	struct snd_soc_jack headset;
 	struct list_head hdmi_pcm_list;
+	bool common_hdmi_codec_drv;
 };
 
 static const struct snd_kcontrol_new cml_controls[] = {
