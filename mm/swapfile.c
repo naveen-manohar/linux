@@ -2894,7 +2894,7 @@ static int claim_swapfile(struct swap_info_struct *p, struct inode *inode)
 		char name[BDEVNAME_SIZE];
 		p->bdev = bdgrab(I_BDEV(inode));
 		bdevname(p->bdev, name);
-		if (strncmp(name, "zram", strlen("zram"))) {
+		if (!sysctl_disk_based_swap && strncmp(name, "zram", strlen("zram"))) {
 			bdput(p->bdev);
 			p->bdev = NULL;
 			return -EINVAL;
