@@ -172,53 +172,6 @@ static int card_late_probe(struct snd_soc_card *card)
 }
 #endif
 
-static struct snd_soc_jack_pin sdw_jack_pins[] = {
-	{
-		.pin    = "Headphone",
-		.mask   = SND_JACK_HEADPHONE,
-	},
-	{
-		.pin    = "Headset Mic",
-		.mask   = SND_JACK_MICROPHONE,
-	},
-};
-
-static int headset_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct mc_private *ctx = snd_soc_card_get_drvdata(rtd->card);
-	struct snd_soc_component *component = rtd->codec_dai->component;
-	struct snd_soc_jack *jack;
-	int ret;
-
-	ret = snd_soc_card_jack_new(rtd->card, "Headset Jack",
-				    SND_JACK_HEADSET | SND_JACK_BTN_0 |
-				    SND_JACK_BTN_1 | SND_JACK_BTN_2 |
-				    SND_JACK_BTN_3,
-				    &ctx->sdw_headset,
-				    sdw_jack_pins,
-				    ARRAY_SIZE(sdw_jack_pins));
-	if (ret) {
-		dev_err(rtd->card->dev, "Headset Jack creation failed: %d\n",
-			ret);
-		return ret;
-	}
-
-	jack = &ctx->sdw_headset;
-
-	snd_jack_set_key(jack->jack, SND_JACK_BTN_0, KEY_VOLUMEUP);
-	snd_jack_set_key(jack->jack, SND_JACK_BTN_1, KEY_PLAYPAUSE);
-	snd_jack_set_key(jack->jack, SND_JACK_BTN_2, KEY_VOLUMEDOWN);
-	snd_jack_set_key(jack->jack, SND_JACK_BTN_3, KEY_VOICECOMMAND);
-
-	ret = snd_soc_component_set_jack(component, jack, NULL);
-
-	if (ret)
-		dev_err(rtd->card->dev, "Headset Jack call-back failed: %d\n",
-			ret);
-
-	return ret;
-}
-
 static int sof_rt711_rt1308_rt715_quirk_cb(const struct dmi_system_id *id)
 {
 	sof_rt711_rt1308_rt715_quirk = (unsigned long)id->driver_data;
@@ -260,6 +213,94 @@ static const struct dmi_system_id sof_sdw_rt711_rt1308_rt715_quirk_table[] = {
 	{}
 };
 
+static const struct snd_soc_dapm_widget rt700_widgets[] = {
+	SND_SOC_DAPM_HP("Headphones", NULL),
+	SND_SOC_DAPM_MIC("AMIC", NULL),
+	SND_SOC_DAPM_SPK("Speaker", NULL),
+};
+
+static const struct snd_soc_dapm_route rt700_map[] = {
+	/*Headphones*/
+	{ "Headphones", NULL, "HP" },
+	{ "Speaker", NULL, "SPK" },
+	{ "MIC2", NULL, "AMIC" },
+};
+
+static const struct snd_kcontrol_new rt700_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Headphones"),
+	SOC_DAPM_PIN_SWITCH("AMIC"),
+	SOC_DAPM_PIN_SWITCH("Speaker"),
+};
+
+static struct snd_soc_jack_pin rt700_jack_pins[] = {
+	{
+		.pin    = "Headphones",
+		.mask   = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin    = "AMIC",
+		.mask   = SND_JACK_MICROPHONE,
+	},
+};
+
+static int rt700_rtd_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_card *card = rtd->card;
+	struct mc_private *ctx = snd_soc_card_get_drvdata(card);
+	struct snd_soc_component *component = rtd->codec_dai->component;
+	struct snd_soc_jack *jack;
+	int ret;
+
+	ret = snd_soc_add_card_controls(card, rt700_controls,
+					ARRAY_SIZE(rt700_controls));
+	if (ret) {
+		dev_err(card->dev, "rt700 controls addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_new_controls(&card->dapm, rt700_widgets,
+					ARRAY_SIZE(rt700_widgets));
+	if (ret) {
+		dev_err(card->dev, "rt700 widgets addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt700_map,
+				      ARRAY_SIZE(rt700_map));
+
+	if (ret) {
+		dev_err(card->dev, "rt700 map addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_card_jack_new(rtd->card, "Headset Jack",
+				    SND_JACK_HEADSET | SND_JACK_BTN_0 |
+				    SND_JACK_BTN_1 | SND_JACK_BTN_2 |
+				    SND_JACK_BTN_3,
+				    &ctx->sdw_headset,
+				    rt700_jack_pins,
+				    ARRAY_SIZE(rt700_jack_pins));
+	if (ret) {
+		dev_err(rtd->card->dev, "Headset Jack creation failed: %d\n",
+			ret);
+		return ret;
+	}
+
+	jack = &ctx->sdw_headset;
+
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_0, KEY_VOLUMEUP);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_1, KEY_PLAYPAUSE);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_2, KEY_VOLUMEDOWN);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_3, KEY_VOICECOMMAND);
+
+	ret = snd_soc_component_set_jack(component, jack, NULL);
+	if (ret)
+		dev_err(rtd->card->dev, "Headset Jack call-back failed: %d\n",
+			ret);
+
+	return ret;
+}
+
 /*
  * Note this MUST be called before snd_soc_register_card(), so that the props
  * are in place before the codec component driver's probe function parses them.
@@ -287,16 +328,94 @@ static int sof_rt711_add_codec_device_props(const char *sdw_dev_name)
 	return ret;
 }
 
-static const struct snd_soc_dapm_widget widgets[] = {
+static const struct snd_soc_dapm_widget rt711_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
-	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
-static const struct snd_soc_dapm_route map[] = {
+static const struct snd_soc_dapm_route rt711_map[] = {
 	/* Headphones */
 	{ "Headphone", NULL, "rt711 HP" },
 	{ "rt711 MIC2", NULL, "Headset Mic" },
+};
+
+static const struct snd_kcontrol_new rt711_controls[] = {
+	SOC_DAPM_PIN_SWITCH("Headphone"),
+	SOC_DAPM_PIN_SWITCH("Headset Mic"),
+};
+
+static struct snd_soc_jack_pin rt711_jack_pins[] = {
+	{
+		.pin    = "Headphone",
+		.mask   = SND_JACK_HEADPHONE,
+	},
+	{
+		.pin    = "Headset Mic",
+		.mask   = SND_JACK_MICROPHONE,
+	},
+};
+
+static int rt711_rtd_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_soc_card *card = rtd->card;
+	struct mc_private *ctx = snd_soc_card_get_drvdata(card);
+	struct snd_soc_component *component = rtd->codec_dai->component;
+	struct snd_soc_jack *jack;
+	int ret;
+
+	ret = snd_soc_add_card_controls(card, rt711_controls,
+					ARRAY_SIZE(rt711_controls));
+	if (ret) {
+		dev_err(card->dev, "rt711 controls addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_new_controls(&card->dapm, rt711_widgets,
+					ARRAY_SIZE(rt711_widgets));
+	if (ret) {
+		dev_err(card->dev, "rt711 widgets addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt711_map,
+				      ARRAY_SIZE(rt711_map));
+
+	if (ret) {
+		dev_err(card->dev, "rt711 map addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_card_jack_new(rtd->card, "Headset Jack",
+				    SND_JACK_HEADSET | SND_JACK_BTN_0 |
+				    SND_JACK_BTN_1 | SND_JACK_BTN_2 |
+				    SND_JACK_BTN_3,
+				    &ctx->sdw_headset,
+				    rt711_jack_pins,
+				    ARRAY_SIZE(rt711_jack_pins));
+	if (ret) {
+		dev_err(rtd->card->dev, "Headset Jack creation failed: %d\n",
+			ret);
+		return ret;
+	}
+
+	jack = &ctx->sdw_headset;
+
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_0, KEY_VOLUMEUP);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_1, KEY_PLAYPAUSE);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_2, KEY_VOLUMEDOWN);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_3, KEY_VOICECOMMAND);
+
+	ret = snd_soc_component_set_jack(component, jack, NULL);
+
+	if (ret)
+		dev_err(rtd->card->dev, "Headset Jack call-back failed: %d\n",
+			ret);
+
+	return ret;
+}
+
+static const struct snd_soc_dapm_widget rt1308_widgets[] = {
+	SND_SOC_DAPM_SPK("Speaker", NULL),
 };
 
 /*
@@ -305,16 +424,14 @@ static const struct snd_soc_dapm_route map[] = {
  * for one codec case, and the last two entries are also registered
  * if two 1308s are used.
  */
-static const struct snd_soc_dapm_route rt1308_speaker_map[] = {
+static const struct snd_soc_dapm_route rt1308_map[] = {
 	{ "Speaker", NULL, "rt1308-1 SPOL" },
 	{ "Speaker", NULL, "rt1308-1 SPOR" },
 	{ "Speaker", NULL, "rt1308-2 SPOL" },
 	{ "Speaker", NULL, "rt1308-2 SPOR" },
 };
 
-static const struct snd_kcontrol_new controls[] = {
-	SOC_DAPM_PIN_SWITCH("Headphone"),
-	SOC_DAPM_PIN_SWITCH("Headset Mic"),
+static const struct snd_kcontrol_new rt1308_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Speaker"),
 };
 
@@ -323,7 +440,29 @@ static int first_spk_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	int ret;
 
-	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_speaker_map, 2);
+	ret = snd_soc_add_card_controls(card, rt1308_controls,
+					ARRAY_SIZE(rt1308_controls));
+	if (ret) {
+		dev_err(card->dev, "rt1308 controls addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_new_controls(&card->dapm, rt1308_widgets,
+					ARRAY_SIZE(rt1308_widgets));
+	if (ret) {
+		dev_err(card->dev, "rt1308 widgets addition failed: %d\n", ret);
+		return ret;
+	}
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_map,
+				      ARRAY_SIZE(rt1308_map));
+
+	if (ret)
+		dev_err(card->dev, "rt1308 map addition failed: %d\n", ret);
+
+	return ret;
+
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_map, 2);
 	if (ret)
 		dev_err(rtd->dev, "failed to add first SPK map: %d\n", ret);
 
@@ -335,7 +474,7 @@ static int second_spk_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	int ret;
 
-	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_speaker_map + 2, 2);
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_map + 2, 2);
 	if (ret)
 		dev_err(rtd->dev, "failed to add second SPK map: %d\n", ret);
 
@@ -347,7 +486,7 @@ static int all_spk_init(struct snd_soc_pcm_runtime *rtd)
 	struct snd_soc_card *card = rtd->card;
 	int ret;
 
-	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_speaker_map, 4);
+	ret = snd_soc_dapm_add_routes(&card->dapm, rt1308_map, 4);
 	if (ret)
 		dev_err(rtd->dev, "failed to add all SPK map: %d\n", ret);
 
@@ -487,6 +626,21 @@ static const struct snd_soc_ops sdw_ops = {
 	.shutdown = sdw_shutdown,
 };
 
+static void rt700_init(const struct snd_soc_acpi_link_adr *link,
+		       struct snd_soc_dai_link *dai_links,
+		       struct codec_info *info,
+		       bool playback)
+{
+	/*
+	 * headset should be initialized once.
+	 * Do it with dai link for playback.
+	 */
+	if (!playback)
+		return;
+
+	dai_links->init = rt700_rtd_init;
+}
+
 static void rt711_init(const struct snd_soc_acpi_link_adr *link,
 		       struct snd_soc_dai_link *dai_links,
 		       struct codec_info *info,
@@ -499,7 +653,7 @@ static void rt711_init(const struct snd_soc_acpi_link_adr *link,
 	if (!playback)
 		return;
 
-	dai_links->init = headset_init;
+	dai_links->init = rt711_rtd_init;
 }
 
 static void rt1308_init(const struct snd_soc_acpi_link_adr *link,
@@ -539,6 +693,12 @@ static void rt715_init(const struct snd_soc_acpi_link_adr *link,
 }
 
 static struct codec_info codec_info_list[] = {
+	{
+		.id = 0x700,
+		.direction = {true, true},
+		.dai_name = "rt700-aif1",
+		.init = rt700_init,
+	},
 	{
 		.id = 0x711,
 		.direction = {true, true},
@@ -1241,12 +1401,6 @@ static char sdw_card_long_name[] = "sof-sdw-rt711-stereo-rt1308-rt715";
 #endif
 static struct snd_soc_card card_rt700_rt1308_rt715 = {
 	.name = "sdw-rt711-1308-715",
-	.controls = controls,
-	.num_controls = ARRAY_SIZE(controls),
-	.dapm_widgets = widgets,
-	.num_dapm_widgets = ARRAY_SIZE(widgets),
-	.dapm_routes = map,
-	.num_dapm_routes = ARRAY_SIZE(map),
 	.late_probe = card_late_probe,
 	.codec_conf = codec_conf,
 	.num_configs = ARRAY_SIZE(codec_conf),
