@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (c) 2019 Intel Corporation
+// Copyright (c) 2020 Intel Corporation
 
 /*
- *  sdw_rt711_rt1308_rt715 - ASOC Machine driver for Intel SoundWire platforms
- * connected to 3 Realtek devices
+ *  sof_sdw - ASOC Machine driver for Intel SoundWire platforms
  */
 
 #include <linux/acpi.h>
@@ -68,7 +67,7 @@ enum {
 #define SOF_RT715_DAI_ID_FIX		BIT(11)
 #define SOF_SDW_NO_AGGREGATION		BIT(12)
 
-static unsigned long sof_rt711_rt1308_rt715_quirk = SOF_RT711_JD_SRC_JD1;
+static unsigned long sof_sdw_quirk = SOF_RT711_JD_SRC_JD1;
 
 #define INC_ID(BE, CPU, LINK)	do { (BE)++; (CPU)++; (LINK)++; } while (0)
 
@@ -172,15 +171,15 @@ static int card_late_probe(struct snd_soc_card *card)
 }
 #endif
 
-static int sof_rt711_rt1308_rt715_quirk_cb(const struct dmi_system_id *id)
+static int sof_sdw_quirk_cb(const struct dmi_system_id *id)
 {
-	sof_rt711_rt1308_rt715_quirk = (unsigned long)id->driver_data;
+	sof_sdw_quirk = (unsigned long)id->driver_data;
 	return 1;
 }
 
 static const struct dmi_system_id sof_sdw_rt711_rt1308_rt715_quirk_table[] = {
 	{
-		.callback = sof_rt711_rt1308_rt715_quirk_cb,
+		.callback = sof_sdw_quirk_cb,
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "Latitude"),
@@ -190,7 +189,7 @@ static const struct dmi_system_id sof_sdw_rt711_rt1308_rt715_quirk_table[] = {
 					SOF_RT715_DAI_ID_FIX),
 	},
 	{
-		.callback = sof_rt711_rt1308_rt715_quirk_cb,
+		.callback = sof_sdw_quirk_cb,
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Dell Inc"),
 			DMI_MATCH(DMI_PRODUCT_NAME, "XPS"),
@@ -200,7 +199,7 @@ static const struct dmi_system_id sof_sdw_rt711_rt1308_rt715_quirk_table[] = {
 					SOF_SDW_NO_AGGREGATION),
 	},
 	{
-		.callback = sof_rt711_rt1308_rt715_quirk_cb,
+		.callback = sof_sdw_quirk_cb,
 		.matches = {
 			DMI_MATCH(DMI_SYS_VENDOR, "Intel Corporation"),
 			DMI_MATCH(DMI_PRODUCT_NAME,
@@ -315,11 +314,11 @@ static int sof_rt711_add_codec_device_props(const char *sdw_dev_name)
 	if (!sdw_dev)
 		return -EPROBE_DEFER;
 
-	if (SOF_RT711_JDSRC(sof_rt711_rt1308_rt715_quirk)) {
+	if (SOF_RT711_JDSRC(sof_sdw_quirk)) {
 		int cnt = 0;
 		props[cnt++] = PROPERTY_ENTRY_U32(
 			       "realtek,jd-src",
-			       SOF_RT711_JDSRC(sof_rt711_rt1308_rt715_quirk));
+			       SOF_RT711_JDSRC(sof_sdw_quirk));
 	}
 
 	ret = device_add_properties(sdw_dev, props);
@@ -688,7 +687,7 @@ static void rt715_init(const struct snd_soc_acpi_link_adr *link,
 	 * DAI ID is fixed at SDW_DMIC_DAI_ID for 715 to
 	 * keep sdw DMIC and HDMI setting static in UCM
 	 */
-	if (sof_rt711_rt1308_rt715_quirk & SOF_RT715_DAI_ID_FIX)
+	if (sof_sdw_quirk & SOF_RT715_DAI_ID_FIX)
 		dai_links->id = SDW_DMIC_DAI_ID;
 }
 
@@ -766,7 +765,7 @@ static int get_sdw_dailink_info(const struct snd_soc_acpi_link_adr *links,
 	bool no_aggregation;
 	int i;
 
-	no_aggregation = sof_rt711_rt1308_rt715_quirk & SOF_SDW_NO_AGGREGATION;
+	no_aggregation = sof_sdw_quirk & SOF_SDW_NO_AGGREGATION;
 	*sdw_cpu_dai_num = 0;
 	*sdw_be_num  = 0;
 
@@ -972,7 +971,7 @@ static int get_slave_info(const struct snd_soc_acpi_link_adr *adr_link,
 	bool no_aggregation;
 	int index = 0;
 
-	no_aggregation = sof_rt711_rt1308_rt715_quirk & SOF_SDW_NO_AGGREGATION;
+	no_aggregation = sof_sdw_quirk & SOF_SDW_NO_AGGREGATION;
 	*codec_num = adr_link->num_adr;
 	adr_d = adr_link->adr_d;
 
@@ -1190,11 +1189,11 @@ static int sof_card_dai_links_create(struct device *dev,
 		codec_info_list[i].amp_num = 0;
 
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_HDA_AUDIO_CODEC)
-	hdmi_num = sof_rt711_rt1308_rt715_quirk & SOF_SDW_TGL_HDMI ?
+	hdmi_num = sof_sdw_quirk & SOF_SDW_TGL_HDMI ?
 				SOF_TGL_HDMI_COUNT : SOF_PRE_TGL_HDMI_COUNT;
 #endif
 
-	ssp_mask = SOF_SSP_GET_PORT(sof_rt711_rt1308_rt715_quirk);
+	ssp_mask = SOF_SSP_GET_PORT(sof_sdw_quirk);
 	/*
 	 * on generic tgl platform, I2S or sdw mode is supported
 	 * based on board rework. A ACPI device is registered in
@@ -1214,7 +1213,7 @@ static int sof_card_dai_links_create(struct device *dev,
 	}
 
 	/* enable dmic01 & dmic16k */
-	dmic_num = (sof_rt711_rt1308_rt715_quirk & SOF_SDW_PCH_DMIC) ? 2 : 0;
+	dmic_num = (sof_sdw_quirk & SOF_SDW_PCH_DMIC) ? 2 : 0;
 	comp_num += dmic_num;
 
 	dev_dbg(dev, "sdw %d, ssp %d, dmic %d, hdmi %d", sdw_be_num, ssp_num,
@@ -1396,11 +1395,11 @@ DMIC:
 /* SoC card */
 static char components_string[] = "cfg-spk:2"; /* cfg-spk:%d */
 #if !IS_ENABLED(CONFIG_SND_SOC_INTEL_USER_FRIENDLY_LONG_NAMES)
-/* Can also be sof-sdw-rt711-mono-rt1308-rt715 */
-static char sdw_card_long_name[] = "sof-sdw-rt711-stereo-rt1308-rt715";
+/* Can also be sof-sdw-mono */
+static char sdw_card_long_name[] = "sof-sdw-stereo";
 #endif
-static struct snd_soc_card card_rt700_rt1308_rt715 = {
-	.name = "sdw-rt711-1308-715",
+static struct snd_soc_card card_sof_sdw = {
+	.name = "sof-sdw",
 	.late_probe = card_late_probe,
 	.codec_conf = codec_conf,
 	.num_configs = ARRAY_SIZE(codec_conf),
@@ -1409,7 +1408,7 @@ static struct snd_soc_card card_rt700_rt1308_rt715 = {
 
 static int mc_probe(struct platform_device *pdev)
 {
-	struct snd_soc_card *card = &card_rt700_rt1308_rt715;
+	struct snd_soc_card *card = &card_sof_sdw;
 	struct snd_soc_acpi_mach *mach;
 	struct mc_private *ctx;
 	int ret;
@@ -1430,7 +1429,7 @@ static int mc_probe(struct platform_device *pdev)
 
 	mach = pdev->dev.platform_data;
 	ret = sof_card_dai_links_create(&pdev->dev, mach,
-					&card_rt700_rt1308_rt715);
+					card);
 	if (ret < 0)
 		return ret;
 
@@ -1443,13 +1442,13 @@ static int mc_probe(struct platform_device *pdev)
 
 	snprintf(components_string, sizeof(components_string),
 		 "cfg-spk:%d",
-		 (sof_rt711_rt1308_rt715_quirk & SOF_SDW_MONO_SPK) ? 2 : 4);
+		 (sof_sdw_quirk & SOF_SDW_MONO_SPK) ? 2 : 4);
 #if !IS_ENABLED(CONFIG_SND_SOC_INTEL_USER_FRIENDLY_LONG_NAMES)
 	snprintf(sdw_card_long_name, sizeof(sdw_card_long_name),
-		 "sof-sdw-rt711-%s-rt1308-rt715",
-		 (sof_rt711_rt1308_rt715_quirk & SOF_SDW_MONO_SPK) ?
+		 "sof-sdw-%s",
+		 (sof_sdw_quirk & SOF_SDW_MONO_SPK) ?
 			"mono" : "stereo");
-	card_rt700_rt1308_rt715.long_name = sdw_card_long_name;
+	card->long_name = sdw_card_long_name;
 #endif
 	/* Register the card */
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
@@ -1463,18 +1462,19 @@ static int mc_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static struct platform_driver sdw_rt711_rt1308_rt715_driver = {
+static struct platform_driver sof_sdw_driver = {
 	.driver = {
-		.name = "sdw_rt711_rt1308_rt715",
+		.name = "sof_sdw",
 		.pm = &snd_soc_pm_ops,
 	},
 	.probe = mc_probe,
 };
 
-module_platform_driver(sdw_rt711_rt1308_rt715_driver);
+module_platform_driver(sof_sdw_driver);
 
-MODULE_DESCRIPTION("ASoC SoundWire RT711/1308/715 Machine driver");
+MODULE_DESCRIPTION("ASoC SoundWire Generic Machine driver");
 MODULE_AUTHOR("Bard Liao <yung-chuan.liao@linux.intel.com>");
+MODULE_AUTHOR("Rander Wang <rander.wang@linux.intel.com>");
 MODULE_AUTHOR("Pierre-Louis Bossart <pierre-louis.bossart@linux.intel.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:sdw_rt711_rt1308_rt715");
+MODULE_ALIAS("platform:sof_sdw");
