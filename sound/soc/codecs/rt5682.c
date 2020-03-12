@@ -5,6 +5,8 @@
  * Copyright 2018 Realtek Semiconductor Corp.
  * Author: Bard Liao <bardliao@realtek.com>
  */
+#define DEBUG
+#define VERBOSE_DEBUG
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -1157,7 +1159,7 @@ static void rt5682_jack_detect_handler(struct work_struct *work)
 static const struct snd_kcontrol_new rt5682_snd_controls[] = {
 	/* DAC Digital Volume */
 	SOC_DOUBLE_TLV("DAC1 Playback Volume", RT5682_DAC1_DIG_VOL,
-		RT5682_L_VOL_SFT + 1, RT5682_R_VOL_SFT + 1, 86, 0, dac_vol_tlv),
+		RT5682_L_VOL_SFT + 1, RT5682_R_VOL_SFT + 1, 87, 0, dac_vol_tlv),
 
 	/* IN Boost Volume */
 	SOC_SINGLE_TLV("CBJ Boost Volume", RT5682_CBJ_BST_CTRL,
@@ -2363,8 +2365,21 @@ static int rt5682_set_bias_level(struct snd_soc_component *component,
 static int rt5682_probe(struct snd_soc_component *component)
 {
 	struct rt5682_priv *rt5682 = snd_soc_component_get_drvdata(component);
+	struct sdw_slave *slave;
+	unsigned long time;
 
 	rt5682->component = component;
+
+	if (rt5682->is_sdw) {
+		slave = rt5682->slave;
+		time = wait_for_completion_timeout(
+			&slave->initialization_complete,
+			msecs_to_jiffies(RT5682_PROBE_TIMEOUT));
+		if (!time) {
+			dev_err(&slave->dev, "Initialization not complete, timed out\n");
+			return -ETIMEDOUT;
+		}
+	}
 
 	return 0;
 }
@@ -2900,8 +2915,10 @@ int rt5682_io_init(struct device *dev, struct sdw_slave *slave)
 
 	rt5682_reset(rt5682);
 
-	if (rt5682->first_init)
+	if (rt5682->first_init) {
+		regcache_cache_only(rt5682->regmap, false);
 		regcache_cache_bypass(rt5682->regmap, true);
+	}
 
 	rt5682_calibrate(rt5682);
 
@@ -2962,6 +2979,8 @@ int rt5682_io_init(struct device *dev, struct sdw_slave *slave)
 	regmap_update_bits(rt5682->regmap, RT5682_IRQ_CTRL_2,
 		RT5682_JD1_EN_MASK | RT5682_JD1_IRQ_MASK,
 		RT5682_JD1_EN | RT5682_JD1_IRQ_PUL);
+	regmap_update_bits(rt5682->regmap, RT5682_HP_CHARGE_PUMP_1,
+			RT5682_PM_HP_MASK, RT5682_PM_HP_HV);
 
 reinit:
 	mod_delayed_work(system_power_efficient_wq,
