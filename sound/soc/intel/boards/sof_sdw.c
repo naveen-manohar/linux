@@ -85,6 +85,10 @@ static struct snd_soc_codec_conf codec_conf[] = {
 		.dlc = COMP_CODEC_CONF("sdw:3:25d:715:0"),
 		.name_prefix = "rt715",
 	},
+	{
+		.dlc = COMP_CODEC_CONF("sdw:0:25d:5682:0"),
+		.name_prefix = "rt5682",
+	},
 };
 
 static struct snd_soc_dai_link_component dmic_component[] = {
@@ -143,6 +147,12 @@ static struct codec_info codec_info_list[] = {
 		.direction = {false, true},
 		.dai_name = "rt715-aif2",
 		.init = rt715_init,
+	},
+	{
+		.id = 0x5682,
+		.direction = {true, true},
+		.dai_name = "rt5682-aif1",
+		.init = sof_sdw_rt5682_init,
 	},
 };
 
