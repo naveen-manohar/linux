@@ -103,6 +103,20 @@ static const struct snd_soc_acpi_adr_device rt1308_1_group1_adr[] = {
 	}
 };
 
+static const struct snd_soc_acpi_adr_device rt1308_2_group1_adr[] = {
+	{
+		.adr = 0x000210025D130800,
+		.num_endpoints = 1,
+		.endpoints = &spk_r_endpoint,
+	}
+};
+
+static const struct snd_soc_acpi_adr_device rt715_3_adr[] = {
+	{
+		.adr = 0x000310025D071500,
+		.num_endpoints = 1,
+		.endpoints = &single_endpoint,
+	}
 };
 
 static const struct snd_soc_acpi_link_adr icl_3_in_1_default[] = {
@@ -114,12 +128,12 @@ static const struct snd_soc_acpi_link_adr icl_3_in_1_default[] = {
 	{
 		.mask = BIT(1),
 		.num_adr = ARRAY_SIZE(rt1308_1_group1_adr),
-		.adr_d = rt1308_1_adr,
+		.adr_d = rt1308_1_group1_adr,
 	},
 	{
 		.mask = BIT(2),
 		.num_adr = ARRAY_SIZE(rt1308_2_group1_adr),
-		.adr_d = rt1308_2_adr,
+		.adr_d = rt1308_2_group1_adr,
 	},
 	{
 		.mask = BIT(3),
