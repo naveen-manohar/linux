@@ -165,12 +165,12 @@ static const struct snd_soc_ops sdw_ops = {
 };
 
 static struct sof_sdw_codec_info codec_info_list[] = {
-	{
+/*	{
 		.id = 0x700,
 		.direction = {true, true},
 		.dai_name = "rt700-aif1",
 		.init = sof_sdw_rt700_init,
-	},
+	},*/
 	{
 		.id = 0x711,
 		.direction = {true, true},
