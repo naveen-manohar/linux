@@ -1287,12 +1287,12 @@ static struct sdw_driver max98373_sdw_driver = {
 
 static int __init sdw_slave_init(void)
 {
-	return sdw_register_slave_driver(&max98373_sdw_driver);
+	return sdw_register_driver(&max98373_sdw_driver);
 }
 
 static void __exit sdw_slave_exit(void)
 {
-	sdw_unregister_slave_driver(&max98373_sdw_driver);
+	sdw_unregister_driver(&max98373_sdw_driver);
 }
 
 module_init(sdw_slave_init);
