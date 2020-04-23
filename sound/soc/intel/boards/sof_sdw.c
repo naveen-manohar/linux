@@ -322,6 +322,7 @@ static void init_dai_link(struct snd_soc_dai_link *dai_links, int be_id,
 {
 	dai_links->id = be_id;
 	dai_links->name = name;
+	printk("naveen dai_links->id = %d, dai_links->name = %s %s %d\n", dai_links->id, dai_links->name,__func__, __LINE__);
 	dai_links->platforms = platform_component;
 	dai_links->num_platforms = ARRAY_SIZE(platform_component);
 	dai_links->nonatomic = true;

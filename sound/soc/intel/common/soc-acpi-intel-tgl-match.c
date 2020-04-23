@@ -158,7 +158,7 @@ struct snd_soc_acpi_mach snd_soc_acpi_intel_tgl_sdw_machines[] = {
 		.sof_tplg_filename = "sof-tgl-rt711-rt1308.tplg",
 	},
 	{
-		.link_mask = 0x3, /* rt5682 on link0 and 2xmax98373 on link 1 */
+		.link_mask = 0x2, /* rt5682 on link0 and 2xmax98373 on link 1 */
 		.links = tgl_chromebook_base,
 		.drv_name = "sof_sdw",
 		.sof_fw_filename = "sof-tgl.ri",
