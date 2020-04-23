@@ -523,7 +523,7 @@ static int max98373_dac_event(struct snd_soc_dapm_widget *w,
 
 #define MAX98373_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | \
 	SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
-
+#if 0
 static int max98373_dai_set_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 {
 	struct snd_soc_component *component = codec_dai->component;
@@ -574,7 +574,7 @@ static int max98373_dai_set_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
 
 	return 0;
 }
-
+#endif
 /* BCLKs per LRCLK */
 static const int bclk_sel_table[] = {
 	32, 48, 64, 96, 128, 192, 256, 384, 512, 320,
@@ -1070,7 +1070,7 @@ static const struct snd_soc_component_driver soc_codec_dev_max98373 = {
 };
 
 static const struct snd_soc_dai_ops max98373_dai_ops = {
-	.set_fmt = max98373_dai_set_fmt,
+//	.set_fmt = max98373_dai_set_fmt,
 	.hw_params = max98373_dai_hw_params,
 	.set_tdm_slot = max98373_dai_tdm_slot,
 };
