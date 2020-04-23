@@ -161,7 +161,7 @@ static inline int find_response_code(enum sdw_command_response resp)
 		return 0;
 
 	case SDW_CMD_IGNORED:
-		return -ENODATA;
+		return 0;
 
 	case SDW_CMD_TIMEOUT:
 		return -ETIMEDOUT;
