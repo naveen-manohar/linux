@@ -165,6 +165,11 @@ static int sdw_program_slave_port_params(struct sdw_bus *bus,
 	wbuf |= p_params->flow_mode;
 
 	ret = sdw_update(s_rt->slave, addr1, 0xF, wbuf);
+	if (ret == -61) {
+		printk("naveen %s %d DPN_PortCtrl register write failed for port %d\n", __func__, __LINE__, t_params->port_num);
+		ret = 0;
+	}
+	
 	if (ret < 0) {
 		dev_err(&s_rt->slave->dev,
 			"DPN_PortCtrl register write failed for port %d\n",
