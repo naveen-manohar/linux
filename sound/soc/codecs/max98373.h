@@ -203,6 +203,10 @@
 /* MAX98373_R2000_SW_RESET */
 #define MAX98373_SOFT_RESET (0x1 << 0)
 
+struct sdw_stream_data {
+	struct sdw_stream_runtime *sdw_stream;
+};
+
 struct max98373_priv {
 	struct regmap *regmap;
 	int reset_gpio;
@@ -212,5 +216,6 @@ struct max98373_priv {
 	bool interleave_mode;
 	unsigned int ch_size;
 	bool tdm_mode;
+	void *slave;
 };
 #endif

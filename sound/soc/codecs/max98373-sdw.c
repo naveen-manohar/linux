@@ -122,7 +122,7 @@ static bool max98373_readable_register(struct device *dev, unsigned int reg)
 	case 0x0040 ... 0x0070:			/* Soundwire Slave Control Port Registers	*/
 	case 0x0100 ... 0x0137:			/* Soundwire Data Port 1 Registers	*/
 	case 0x0300 ... 0x0337:			/* Soundwire Data Port 3 Registers	*/
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	case MAX98373_R2000_SW_RESET:
 	case MAX98373_R2001_INT_RAW1 ... MAX98373_R200C_INT_EN3:
 	case MAX98373_R2010_IRQ_CTRL:
@@ -195,7 +195,7 @@ static void max98373_read_config(struct sdw_slave *slave)
 	int value;
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	if (!device_property_read_u32(dev, "maxim,vmon-slot-no", &value))
 		max98373->v_slot = value & 0xF;
 	else
@@ -254,10 +254,7 @@ static void max98373_reset(struct sdw_slave *slave)
 	int ret, reg, count;
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
-	/* Perform IO operations only if slave is in ATTACHED state */
-	if (slave->status != SDW_SLAVE_ATTACHED)
-		return;
+	printk("naveen %s %d\n", __func__, __LINE__);
 
 	/* Software Reset */
 	ret = regmap_update_bits(max98373->regmap,
@@ -284,12 +281,16 @@ static void max98373_reset(struct sdw_slave *slave)
 
 static int max98373_io_init(struct sdw_slave *slave)
 {
+	unsigned int value;
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Perform IO operations only if slave is in ATTACHED state */
 	if (slave->status != SDW_SLAVE_ATTACHED)
+	{
+		printk("naveen %s %d\n", __func__, __LINE__);
 		return 0;
+	}
 
 	/* Enable Runtime PM */
 	pm_runtime_set_autosuspend_delay(dev, 3000);
@@ -299,56 +300,37 @@ static int max98373_io_init(struct sdw_slave *slave)
 	/* Software Reset */
 	max98373_reset(slave);
 
-	/* IV default slot configuration */
-	regmap_write(max98373->regmap,		MAX98373_R2020_PCM_TX_HIZ_EN_1,			0xFF);
-	regmap_write(max98373->regmap,		MAX98373_R2021_PCM_TX_HIZ_EN_2,			0xFF);
-	/* L/R mix configuration */
-	regmap_write(max98373->regmap,		MAX98373_R2029_PCM_TO_SPK_MONO_MIX_1,	0x80);
-	regmap_write(max98373->regmap,		MAX98373_R202A_PCM_TO_SPK_MONO_MIX_2,	0x01);
-	/* Set inital volume (0dB) */
-	regmap_write(max98373->regmap,		MAX98373_R203D_AMP_DIG_VOL_CTRL,		0x00);
-	regmap_write(max98373->regmap,		MAX98373_R203E_AMP_PATH_GAIN,			0x00);
+	value = 0x00; regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value); 		// Global Disable
+	value = 0x03; regmap_write(max98373->regmap, MAX98373_R2025_AUDIO_IF_MODE, value);		// Set SDW Mode
+	value = 0x03; regmap_write(max98373->regmap, MAX98373_R2047_IV_SENSE_ADC_EN, value);	// Enable ADC
+	value = 0x00; regmap_write(max98373->regmap, MAX98373_R203D_AMP_DIG_VOL_CTRL, value);	// Set SPKR Volume
+	value = 0x03; regmap_write(max98373->regmap, MAX98373_R2043_AMP_EN, value);				// Enable SPKR
 
-	/* Enable DC blocker */
-	regmap_write(max98373->regmap,		MAX98373_R203F_AMP_DSP_CFG,				0x3);
+	// The default Sampling Rate value for IV and SPKR is 48KHz
+	value = 0x05; regmap_write(max98373->regmap,MAX98373_R2036_SOUNDWIRE_CTRL, value);		// SWCLK
+	value = 0x88; regmap_write(max98373->regmap, MAX98373_R2028_PCM_SR_SETUP_2, value);		// SPK and IVADC SR Register
 
-	/* Enable IMON VMON DC blocker */
-	regmap_write(max98373->regmap,		MAX98373_R2046_IV_SENSE_ADC_DSP_CFG,	0x7);
-
-	/* voltage, current slot configuration */
-	regmap_write(max98373->regmap,		MAX98373_R2022_PCM_TX_SRC_1,
-		(max98373->i_slot << MAX98373_PCM_TX_CH_SRC_A_I_SHIFT |		max98373->v_slot) & 0xFF);
-
-	if (max98373->v_slot < 8)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2020_PCM_TX_HIZ_EN_1,		1 << max98373->v_slot, 0);
-	else
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2021_PCM_TX_HIZ_EN_2,		1 << (max98373->v_slot - 8), 0);
-
-	if (max98373->i_slot < 8)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2020_PCM_TX_HIZ_EN_1,		1 << max98373->i_slot, 0);
-	else
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2021_PCM_TX_HIZ_EN_2,		1 << (max98373->i_slot - 8), 0);
-
-	/* speaker feedback slot configuration */
-	regmap_write(max98373->regmap,		MAX98373_R2023_PCM_TX_SRC_2,			max98373->spkfb_slot & 0xFF);
-
-	/* Set interleave mode */
-	if (max98373->interleave_mode)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2024_PCM_DATA_FMT_CFG,
-			MAX98373_PCM_TX_CH_INTERLEAVE_MASK,			MAX98373_PCM_TX_CH_INTERLEAVE_MASK);
-
-	/* Speaker enable */
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2043_AMP_EN,
-		MAX98373_SPK_EN_MASK, 1);
+	/* Enable the codec - it can play the audio after 4 ms....	*/
+	value = 0x01; regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value);		// Global Enable
 
 	pm_runtime_put_sync_autosuspend(dev);
 
+	return 0;
+}
+
+
+static int max98373_snd_probe(struct snd_soc_component *component)
+{
+	unsigned int value;
+	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
+	printk("naveen %s %d\n", __func__, __LINE__);
+
+	value = 0x00; regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value); 		// Global Disable
+
+	/* Enable the codec - it can play the audio after 4 ms....	*/
+	value = 0x01; regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value);		// Global Enable
+
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -357,12 +339,8 @@ static int max98373_clock_config(struct sdw_slave *slave, struct sdw_bus_params 
 	struct device *dev = &slave->dev;
 	struct max98373_priv *max98373 = dev_get_drvdata(dev);
 	unsigned int clk_freq, value;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	clk_freq = (params->curr_dr_freq >> 1);
-
-	/* Perform IO operations only if slave is in ATTACHED state */
-	if (slave->status != SDW_SLAVE_ATTACHED)
-		return 0;
 
 	/* Before programming the clock - disable the codec */
 	value = 0x00; 	regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value); 		// Global Disable
@@ -374,34 +352,74 @@ static int max98373_clock_config(struct sdw_slave *slave, struct sdw_bus_params 
 	value = 0x04;
 	switch (clk_freq)
 	{
+
+		case 13000000/2:
+			value = 0x06 + 0x08; break;
+		case 13000000/4:
+			value = 0x06 + 0x10; break;
+
 		case 12288000:
 			value = 0x05; break;
 		case 12288000/2:
 			value = 0x05 + 0x08; break;
 		case 12288000/4:
 			value = 0x05 + 0x10; break;
-		case 12288000 / 8:
+		case 12288000/8:
 			value = 0x05 + 0x18; break;
 
 		case 12000000:
 			value = 0x04; break;
-		case 12000000 / 2:
+		case 12000000/2:
 			value = 0x04 + 0x08; break;
-		case 12000000 / 4:
+		case 12000000/4:
 			value = 0x04 + 0x10; break;
-		case 12000000 / 8:
+		case 12000000/8:
 			value = 0x04 + 0x18; break;
+
+		case 11289600:
+			value = 0x03; break;
+		case 11289600/2:
+			value = 0x03 + 0x08; break;
+		case 11289600/4:
+			value = 0x03 + 0x10; break;
+		case 11289600/8:
+			value = 0x03 + 0x18; break;
 
 		case 9600000:
 			value = 0x02; break;
-		case 9600000 / 2:
+		case 9600000/2:
 			value = 0x02 + 0x08; break;
-		case 9600000 / 4:
+		case 9600000/4:
 			value = 0x02 + 0x10; break;
-		case 9600000 / 8:
+		case 9600000/8:
 			value = 0x02 + 0x18; break;
+
+		case 8400000:
+			value = 0x01; break;
+		case 8400000/2:
+			value = 0x01 + 0x08; break;
+		case 8400000/4:
+			value = 0x01 + 0x10; break;
+		case 8400000/8:
+			value = 0x01 + 0x18; break;
+
+		case 7680000:
+			value = 0x00; break;
+		case 7680000/2:
+			value = 0x00 + 0x08; break;
+		case 7680000/4:
+			value = 0x00 + 0x10; break;
+		case 7680000/8:
+			value = 0x00 + 0x18; break;
+
+		default:
+			value = 0x04; break;
 	}
 	regmap_write(max98373->regmap,MAX98373_R2036_SOUNDWIRE_CTRL, value);		// SWCLK
+
+	// The default Sampling Rate value for IV is 48KHz
+	value = 0x88; regmap_write(max98373->regmap, MAX98373_R2028_PCM_SR_SETUP_2, value);		// SPK and IVADC SR Register
+
 
 	/* Enable the codec - it can play the audio after 4 ms....	*/
 	value = 0x01; regmap_write(max98373->regmap, MAX98373_R20FF_GLOBAL_SHDN, value);		// Global Enable
@@ -410,81 +428,6 @@ static int max98373_clock_config(struct sdw_slave *slave, struct sdw_bus_params 
 }
 
 
-static int max98373_snd_probe(struct snd_soc_component *component)
-{
-	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
-
-	/* IV default slot configuration */
-	regmap_write(max98373->regmap,
-		MAX98373_R2020_PCM_TX_HIZ_EN_1,
-		0xFF);
-	regmap_write(max98373->regmap,
-		MAX98373_R2021_PCM_TX_HIZ_EN_2,
-		0xFF);
-	/* L/R mix configuration */
-	regmap_write(max98373->regmap,
-		MAX98373_R2029_PCM_TO_SPK_MONO_MIX_1,
-		0x80);
-	regmap_write(max98373->regmap,
-		MAX98373_R202A_PCM_TO_SPK_MONO_MIX_2,
-		0x1);
-	/* Set inital volume (0dB) */
-	regmap_write(max98373->regmap,
-		MAX98373_R203D_AMP_DIG_VOL_CTRL,
-		0x00);
-	regmap_write(max98373->regmap,
-		MAX98373_R203E_AMP_PATH_GAIN,
-		0x00);
-	/* Enable DC blocker */
-	regmap_write(max98373->regmap,
-		MAX98373_R203F_AMP_DSP_CFG,
-		0x3);
-	/* Enable IMON VMON DC blocker */
-	regmap_write(max98373->regmap,
-		MAX98373_R2046_IV_SENSE_ADC_DSP_CFG,
-		0x7);
-	/* voltage, current slot configuration */
-	regmap_write(max98373->regmap,
-		MAX98373_R2022_PCM_TX_SRC_1,
-		(max98373->i_slot << MAX98373_PCM_TX_CH_SRC_A_I_SHIFT |
-		max98373->v_slot) & 0xFF);
-	if (max98373->v_slot < 8)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2020_PCM_TX_HIZ_EN_1,
-			1 << max98373->v_slot, 0);
-	else
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2021_PCM_TX_HIZ_EN_2,
-			1 << (max98373->v_slot - 8), 0);
-
-	if (max98373->i_slot < 8)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2020_PCM_TX_HIZ_EN_1,
-			1 << max98373->i_slot, 0);
-	else
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2021_PCM_TX_HIZ_EN_2,
-			1 << (max98373->i_slot - 8), 0);
-
-	/* speaker feedback slot configuration */
-	regmap_write(max98373->regmap,
-		MAX98373_R2023_PCM_TX_SRC_2,
-		max98373->spkfb_slot & 0xFF);
-
-	/* Set interleave mode */
-	if (max98373->interleave_mode)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2024_PCM_DATA_FMT_CFG,
-			MAX98373_PCM_TX_CH_INTERLEAVE_MASK,
-			MAX98373_PCM_TX_CH_INTERLEAVE_MASK);
-
-	/* Speaker enable */
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2043_AMP_EN,
-		MAX98373_SPK_EN_MASK, 1);
-
-	return 0;
-}
 
 /*****************************************************************************/
 
@@ -521,100 +464,7 @@ static int max98373_dac_event(struct snd_soc_dapm_widget *w,
 
 #define MAX98373_RATES SNDRV_PCM_RATE_8000_96000
 
-#define MAX98373_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | \
-	SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S32_LE)
-#if 0
-static int max98373_dai_set_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
-{
-	struct snd_soc_component *component = codec_dai->component;
-	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
-	unsigned int format = 0;
-	unsigned int invert = 0;
-
-	dev_dbg(component->dev, "%s: fmt 0x%08X\n", __func__, fmt);
-
-	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
-	case SND_SOC_DAIFMT_NB_NF:
-		break;
-	case SND_SOC_DAIFMT_IB_NF:
-		invert = MAX98373_PCM_MODE_CFG_PCM_BCLKEDGE;
-		break;
-	default:
-		dev_err(component->dev, "DAI invert mode unsupported\n");
-		return -EINVAL;
-	}
-
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2026_PCM_CLOCK_RATIO,
-		MAX98373_PCM_MODE_CFG_PCM_BCLKEDGE,
-		invert);
-
-	/* interface format */
-	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
-	case SND_SOC_DAIFMT_I2S:
-		format = MAX98373_PCM_FORMAT_I2S;
-		break;
-	case SND_SOC_DAIFMT_LEFT_J:
-		format = MAX98373_PCM_FORMAT_LJ;
-		break;
-	case SND_SOC_DAIFMT_DSP_A:
-		format = MAX98373_PCM_FORMAT_TDM_MODE1;
-		break;
-	case SND_SOC_DAIFMT_DSP_B:
-		format = MAX98373_PCM_FORMAT_TDM_MODE0;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2024_PCM_DATA_FMT_CFG,
-		MAX98373_PCM_MODE_CFG_FORMAT_MASK,
-		format << MAX98373_PCM_MODE_CFG_FORMAT_SHIFT);
-
-	return 0;
-}
-#endif
-/* BCLKs per LRCLK */
-static const int bclk_sel_table[] = {
-	32, 48, 64, 96, 128, 192, 256, 384, 512, 320,
-};
-
-static int max98373_get_bclk_sel(int bclk)
-{
-	int i;
-	/* match BCLKs per LRCLK */
-	for (i = 0; i < ARRAY_SIZE(bclk_sel_table); i++) {
-		if (bclk_sel_table[i] == bclk)
-			return i + 2;
-	}
-	return 0;
-}
-
-static int max98373_set_clock(struct snd_soc_component *component,
-	struct snd_pcm_hw_params *params)
-{
-	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
-	/* BCLK/LRCLK ratio calculation */
-	int blr_clk_ratio = params_channels(params) * max98373->ch_size;
-	int value;
-
-	if (!max98373->tdm_mode) {
-		/* BCLK configuration */
-		value = max98373_get_bclk_sel(blr_clk_ratio);
-		if (!value) {
-			dev_err(component->dev, "format unsupported %d\n",
-				params_format(params));
-			return -EINVAL;
-		}
-
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2026_PCM_CLOCK_RATIO,
-			MAX98373_PCM_CLK_SETUP_BSEL_MASK,
-			value);
-	}
-	return 0;
-}
+#define MAX98373_FORMATS (SNDRV_PCM_FMTBIT_S32_LE)
 
 
 static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
@@ -623,10 +473,61 @@ static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_component *component = dai->component;
 	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
+
+	struct sdw_stream_config stream_config; 
+	struct sdw_port_config port_config; 
+	enum sdw_data_direction direction; 
+	struct sdw_stream_data *stream; 
+
 	unsigned int sampling_rate = 0;
 	unsigned int chan_sz = 0;
+	unsigned int num_channels = 0;
+	unsigned int port = 0;
+	int retval;
+	printk("naveen %s %d\n", __func__, __LINE__);
 
-	/* pcm mode configuration */
+	stream = snd_soc_dai_get_dma_data(dai, substream);
+
+	if (!stream) 
+		return -EINVAL; 
+ 
+	if (!max98373->slave) 
+		return -EINVAL; 
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) { 
+ 		direction = SDW_DATA_DIR_RX; 
+ 		port = 1; 
+ 	} else { 
+ 		direction = SDW_DATA_DIR_TX; 
+		port = 3; 
+	} 
+ 
+ 
+	stream_config.frame_rate = params_rate(params); 
+ 	stream_config.ch_count = params_channels(params); 
+ 	stream_config.bps = snd_pcm_format_width(params_format(params)); 
+ 	stream_config.direction = direction; 
+
+ 
+ 	num_channels = params_channels(params); 
+ 	port_config.ch_mask = (1 << (num_channels)) - 1; 
+ 	port_config.num = port; 
+
+	printk("naveen %s port_config.num=%d %d\n", __func__, port_config.num, __LINE__);
+ 	retval = sdw_stream_add_slave(max98373->slave, &stream_config, 
+ 					&port_config, 1, stream->sdw_stream); 
+ 	if (retval) { 
+		dev_err(dai->dev, "Unable to configure port\n"); 
+ 		return retval; 
+ 	} 
+
+ 
+	if (params_channels(params) > 16) { 
+ 		dev_err(component->dev, "Unsupported channels %d\n",  params_channels(params)); 
+ 		return -EINVAL; 
+ 	} 
+
+	/* Channel size configuration */
 	switch (snd_pcm_format_width(params_format(params))) {
 	case 16:
 		chan_sz = MAX98373_PCM_MODE_CFG_CHANSZ_16;
@@ -638,9 +539,8 @@ static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
 		chan_sz = MAX98373_PCM_MODE_CFG_CHANSZ_32;
 		break;
 	default:
-		dev_err(component->dev, "format unsupported %d\n",
-			params_format(params));
-		goto err;
+		dev_err(component->dev, "Channel size unsupported %d\n", params_format(params));
+ 		return -EINVAL; 
 	}
 
 	max98373->ch_size = snd_pcm_format_width(params_format(params));
@@ -649,10 +549,9 @@ static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
 		MAX98373_R2024_PCM_DATA_FMT_CFG,
 		MAX98373_PCM_MODE_CFG_CHANSZ_MASK, chan_sz);
 
-	dev_dbg(component->dev, "format supported %d",
-		params_format(params));
+	dev_dbg(component->dev, "Format supported %d",		params_format(params));
 
-	/* sampling rate configuration */
+	/* Sampling rate configuration */
 	switch (params_rate(params)) {
 	case 8000:
 		sampling_rate = MAX98373_PCM_SR_SET1_SR_8000;
@@ -688,121 +587,79 @@ static int max98373_dai_hw_params(struct snd_pcm_substream *substream,
 		sampling_rate = MAX98373_PCM_SR_SET1_SR_96000;
 		break;
 	default:
-		dev_err(component->dev, "rate %d not supported\n",
-			params_rate(params));
-		goto err;
+		dev_err(component->dev, "Rate %d is not supported\n",	params_rate(params));
+		return -EINVAL;
 	}
 
-	/* set DAI_SR to correct LRCLK frequency */
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2027_PCM_SR_SETUP_1,
-		MAX98373_PCM_SR_SET1_SR_MASK,
-		sampling_rate);
+	/* set correct sampling frequency */
 	regmap_update_bits(max98373->regmap,
 		MAX98373_R2028_PCM_SR_SETUP_2,
 		MAX98373_PCM_SR_SET2_SR_MASK,
 		sampling_rate << MAX98373_PCM_SR_SET2_SR_SHIFT);
 
 	/* set sampling rate of IV */
-	if (max98373->interleave_mode &&
-	    sampling_rate > MAX98373_PCM_SR_SET1_SR_16000)
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2028_PCM_SR_SETUP_2,
-			MAX98373_PCM_SR_SET2_IVADC_SR_MASK,
-			sampling_rate - 3);
-	else
-		regmap_update_bits(max98373->regmap,
-			MAX98373_R2028_PCM_SR_SETUP_2,
-			MAX98373_PCM_SR_SET2_IVADC_SR_MASK,
-			sampling_rate);
-
-	return max98373_set_clock(component, params);
-err:
-	return -EINVAL;
-}
-
-static int max98373_dai_tdm_slot(struct snd_soc_dai *dai,
-	unsigned int tx_mask, unsigned int rx_mask,
-	int slots, int slot_width)
-{
-	struct snd_soc_component *component = dai->component;
-	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
-	int bsel = 0;
-	unsigned int chan_sz = 0;
-	unsigned int mask;
-	int x, slot_found;
-
-	if (!tx_mask && !rx_mask && !slots && !slot_width)
-		max98373->tdm_mode = false;
-	else
-		max98373->tdm_mode = true;
-
-	/* BCLK configuration */
-	bsel = max98373_get_bclk_sel(slots * slot_width);
-	if (bsel == 0) {
-		dev_err(component->dev, "BCLK %d not supported\n",
-			slots * slot_width);
-		return -EINVAL;
-	}
-
 	regmap_update_bits(max98373->regmap,
-		MAX98373_R2026_PCM_CLOCK_RATIO,
-		MAX98373_PCM_CLK_SETUP_BSEL_MASK,
-		bsel);
-
-	/* Channel size configuration */
-	switch (slot_width) {
-	case 16:
-		chan_sz = MAX98373_PCM_MODE_CFG_CHANSZ_16;
-		break;
-	case 24:
-		chan_sz = MAX98373_PCM_MODE_CFG_CHANSZ_24;
-		break;
-	case 32:
-		chan_sz = MAX98373_PCM_MODE_CFG_CHANSZ_32;
-		break;
-	default:
-		dev_err(component->dev, "format unsupported %d\n",
-			slot_width);
-		return -EINVAL;
-	}
-
-	regmap_update_bits(max98373->regmap,
-		MAX98373_R2024_PCM_DATA_FMT_CFG,
-		MAX98373_PCM_MODE_CFG_CHANSZ_MASK, chan_sz);
-
-	/* Rx slot configuration */
-	slot_found = 0;
-	mask = rx_mask;
-	for (x = 0 ; x < 16 ; x++, mask >>= 1) {
-		if (mask & 0x1) {
-			if (slot_found == 0)
-				regmap_update_bits(max98373->regmap,
-					MAX98373_R2029_PCM_TO_SPK_MONO_MIX_1,
-					MAX98373_PCM_TO_SPK_CH0_SRC_MASK, x);
-			else
-				regmap_write(max98373->regmap,
-					MAX98373_R202A_PCM_TO_SPK_MONO_MIX_2,
-					x);
-			slot_found++;
-			if (slot_found > 1)
-				break;
-		}
-	}
-
-	/* Tx slot Hi-Z configuration */
-	regmap_write(max98373->regmap,
-		MAX98373_R2020_PCM_TX_HIZ_EN_1,
-		~tx_mask & 0xFF);
-	regmap_write(max98373->regmap,
-		MAX98373_R2021_PCM_TX_HIZ_EN_2,
-		(~tx_mask & 0xFF00) >> 8);
+		MAX98373_R2028_PCM_SR_SETUP_2,
+		MAX98373_PCM_SR_SET2_IVADC_SR_MASK,
+		sampling_rate);
 
 	return 0;
 }
 
+
+static int max98373_pcm_hw_free(struct snd_pcm_substream *substream, 
+ 				struct snd_soc_dai *dai) 
+ { 
+ 	struct snd_soc_component *component = dai->component; 
+	struct max98373_priv *max98373 = snd_soc_component_get_drvdata(component);
+	struct sdw_stream_data *stream = snd_soc_dai_get_dma_data(dai, substream); 
+ 
+ 	if (!max98373->slave) 
+ 		return -EINVAL; 
+
+	sdw_stream_remove_slave(max98373->slave, stream->sdw_stream); 
+ 	return 0; 
+} 
+
+static int max98373_set_sdw_stream(struct snd_soc_dai *dai, void *sdw_stream, int direction) 
+{ 
+ 	struct sdw_stream_data *stream; 
+	printk("naveen %s %d\n", __func__, __LINE__);
+ 
+ 	stream = kzalloc(sizeof(*stream), GFP_KERNEL); 
+ 	if (!stream) 
+ 		return -ENOMEM; 
+ 
+ 	stream->sdw_stream = (struct sdw_stream_runtime *)sdw_stream; 
+  
+ 	/* Use tx_mask or rx_mask to configure stream tag and set dma_data */ 
+ 	if (direction == SNDRV_PCM_STREAM_PLAYBACK) 
+ 		dai->playback_dma_data = stream; 
+ 	else 
+ 		dai->capture_dma_data = stream; 
+ 	printk("naveen %s %d\n", __func__, __LINE__);
+  	return 0; 
+} 
+
+static void max98373_shutdown(struct snd_pcm_substream *substream, 
+ 				struct snd_soc_dai *dai) 
+{ 
+	struct sdw_stream_data *stream; 
+	printk("naveen %s %d\n", __func__, __LINE__);
+	stream = snd_soc_dai_get_dma_data(dai, substream);
+ 	snd_soc_dai_set_dma_data(dai, substream, NULL); 
+ 	kfree(stream); 
+} 
+
 /*      End of DAI operations                                                */
 /*****************************************************************************/
+
+static const struct snd_soc_dai_ops max98373_dai_ops = {
+	.hw_params = max98373_dai_hw_params,
+	.hw_free = max98373_pcm_hw_free,
+	.set_sdw_stream	= max98373_set_sdw_stream,
+	.shutdown	= max98373_shutdown,	
+};
 
 
 static DECLARE_TLV_DB_SCALE(max98373_digital_tlv, -6350, 50, 1);
@@ -1069,12 +926,6 @@ static const struct snd_soc_component_driver soc_codec_dev_max98373 = {
 	.non_legacy_dai_naming	= 1,
 };
 
-static const struct snd_soc_dai_ops max98373_dai_ops = {
-//	.set_fmt = max98373_dai_set_fmt,
-	.hw_params = max98373_dai_hw_params,
-	.set_tdm_slot = max98373_dai_tdm_slot,
-};
-
 static struct snd_soc_dai_driver max98373_dai[] = {
 	{
 		.name = "max98373-aif1",
@@ -1102,13 +953,14 @@ static int max98373_init(struct sdw_slave *slave, struct regmap *regmap)
 	struct max98373_priv *max98373;
 	int ret = 0;
 	struct device *dev = &slave->dev;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
     /*  Allocate and assign private driver data structure  */
 	max98373 = devm_kzalloc(dev, sizeof(*max98373), GFP_KERNEL);
 	if (!max98373)
 		return -ENOMEM;
 	dev_set_drvdata(dev, max98373);
 	max98373->regmap = regmap;
+	max98373->slave = slave;
 
 	/* Read voltage and slot configuration */
 	max98373_read_config(slave);
@@ -1118,10 +970,6 @@ static int max98373_init(struct sdw_slave *slave, struct regmap *regmap)
 		max98373_dai, ARRAY_SIZE(max98373_dai));
 	if (ret < 0)
 		dev_err(dev, "Failed to register codec: %d\n", ret);
-
-	/* Perform IO operations only if slave is in ATTACHED state */
-	if (slave->status != SDW_SLAVE_ATTACHED)
-		return 0;
 
 	/* Enable Runtime PM */
 	pm_runtime_set_autosuspend_delay(dev, 3000);
@@ -1137,6 +985,7 @@ static int max98373_update_status(struct sdw_slave *slave,
 			       enum sdw_slave_status status)
 {
 	pr_err("In %s\n", __func__);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/*
 	 * Perform initialization only if slave status is SDW_SLAVE_ATTACHED
 	 */
@@ -1144,45 +993,86 @@ static int max98373_update_status(struct sdw_slave *slave,
 		/* perform I/O transfers required for Slave initialization */
 		max98373_io_init(slave);
 	}
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
 static int max98373_read_prop(struct sdw_slave *slave)
 {
 	struct sdw_slave_prop *prop = &slave->prop;
-	int i;
+	int nval, i, num_of_ports = 1;
 	u32 bit;
 	unsigned long addr;
 	struct sdw_dpn_prop *dpn;
-
-	/* set the timeout values */
+	printk("naveen %s %d\n", __func__, __LINE__);
 
 	prop->source_ports = 0x08;	/* BITMAP: 00001000  Dataport 3 is active */
 	prop->sink_ports = 0x02;	/* BITMAP: 00000010  Dataport 1 is active */
 	prop->paging_support = true;
 	prop->clk_stop_timeout = 20;
-	sdw_slave_read_prop(slave);
 
-	dpn = prop->src_dpn_prop;
+	nval = hweight32(prop->source_ports);
+	num_of_ports += nval;
+	prop->src_dpn_prop = devm_kcalloc(&slave->dev, nval,
+						sizeof(*prop->src_dpn_prop),
+						GFP_KERNEL);
+	if (!prop->src_dpn_prop) {
+		printk("naveen %s %d\n", __func__, __LINE__);
+		return -ENOMEM;
+	}
 	i = 0;
+	dpn = prop->src_dpn_prop;
 	addr = prop->source_ports;
 	for_each_set_bit(bit, &addr, 32) {
 		dpn[i].num = bit;
+		printk("naveen %s %d\n", __func__, __LINE__);
+		dpn[i].type = SDW_DPN_SIMPLE;
 		dpn[i].simple_ch_prep_sm = true;
 		dpn[i].ch_prep_timeout = 10;
 		i++;
 	}
 
-	dpn = prop->sink_dpn_prop;
+	/* do this again for sink now */
+	nval = hweight32(prop->sink_ports);
+	num_of_ports += nval;
+	prop->sink_dpn_prop = devm_kcalloc(&slave->dev, nval,
+						sizeof(*prop->sink_dpn_prop),
+						GFP_KERNEL);
+	if (!prop->sink_dpn_prop) {
+		printk("naveen %s %d\n", __func__, __LINE__);
+		return -ENOMEM;
+	}
 	i = 0;
+	dpn = prop->sink_dpn_prop;
 	addr = prop->sink_ports;
 	for_each_set_bit(bit, &addr, 32) {
 		dpn[i].num = bit;
+		printk("naveen %s %d\n", __func__, __LINE__);
+		dpn[i].type = SDW_DPN_SIMPLE;
 		dpn[i].simple_ch_prep_sm = true;
 		dpn[i].ch_prep_timeout = 10;
 		i++;
 	}
 
+	/* Allocate port_ready based on num_of_ports */
+	slave->port_ready = devm_kcalloc(&slave->dev, num_of_ports,
+					sizeof(*slave->port_ready),
+					GFP_KERNEL);
+	if (!slave->port_ready) {
+		printk("naveen %s %d\n", __func__, __LINE__);
+		return -ENOMEM;
+	}
+	/* Initialize completion */
+	for (i = 0; i < num_of_ports; i++) {
+		printk("naveen %s %d\n", __func__, __LINE__);
+		init_completion(&slave->port_ready[i]);
+	}
+	/* set the timeout values */
+	prop->clk_stop_timeout = 20;
+
+	/* wake-up event */
+	prop->wake_capable = 1;
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1190,11 +1080,11 @@ static int max98373_bus_config(struct sdw_slave *slave,
 			    struct sdw_bus_params *params)
 {
 	int ret;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	ret = max98373_clock_config(slave, params);
 	if (ret < 0)
 		dev_err(&slave->dev, "Invalid clk config");
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1202,6 +1092,7 @@ static int max98373_interrupt_callback(struct sdw_slave *slave,
 				    struct sdw_slave_intr_status *status)
 {
 	pr_debug("%s control_port_stat=%x", __func__, status->control_port);
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return 0;
 }
 
@@ -1221,7 +1112,7 @@ static int max98373_sdw_probe(struct sdw_slave *slave,
 {
 	struct regmap *regmap;
 	int ret = 0;
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	/* Assign ops */
 	slave->ops = &max98373_slave_ops;
 
@@ -1231,7 +1122,7 @@ static int max98373_sdw_probe(struct sdw_slave *slave,
 		return -EINVAL;
 
 	max98373_init(slave, regmap);
-
+	printk("naveen %s %d\n", __func__, __LINE__);
 	return ret;
 }
 
