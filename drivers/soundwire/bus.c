@@ -31,6 +31,12 @@ int sdw_add_bus_master(struct sdw_bus *bus)
 		return -EINVAL;
 	}
 
+	if (!bus->compute_params) {
+		dev_err(bus->dev,
+			"Bandwidth allocation not configured, compute_parems no set\n");
+		return -EINVAL;
+	}
+
 	mutex_init(&bus->msg_lock);
 	mutex_init(&bus->bus_lock);
 	INIT_LIST_HEAD(&bus->slaves);
@@ -563,9 +569,9 @@ static int sdw_assign_device_num(struct sdw_slave *slave)
 	}
 
 	if (!new_device)
-		dev_info(slave->bus->dev,
-			 "Slave already registered, reusing dev_num:%d\n",
-			 slave->dev_num);
+		dev_dbg(slave->bus->dev,
+			"Slave already registered, reusing dev_num:%d\n",
+			slave->dev_num);
 
 	/* Clear the slave->dev_num to transfer message on device 0 */
 	dev_num = slave->dev_num;
@@ -828,12 +834,12 @@ int sdw_bus_prep_clk_stop(struct sdw_bus *bus)
 		if (!slave->dev_num)
 			continue;
 
-		/* Identify if Slave(s) are available on Bus */
-		is_slave = true;
-
 		if (slave->status != SDW_SLAVE_ATTACHED &&
 		    slave->status != SDW_SLAVE_ALERT)
 			continue;
+
+		/* Identify if Slave(s) are available on Bus */
+		is_slave = true;
 
 		slave_mode = sdw_get_clk_stop_mode(slave);
 		slave->curr_clk_stop_mode = slave_mode;
@@ -864,6 +870,10 @@ int sdw_bus_prep_clk_stop(struct sdw_bus *bus)
 		if (ret < 0)
 			return ret;
 	}
+
+	/* Don't need to inform slaves if there is no slave attached */
+	if (!is_slave)
+		return ret;
 
 	/* Inform slaves that prep is done */
 	list_for_each_entry(slave, &bus->slaves, node) {
@@ -950,12 +960,12 @@ int sdw_bus_exit_clk_stop(struct sdw_bus *bus)
 		if (!slave->dev_num)
 			continue;
 
-		/* Identify if Slave(s) are available on Bus */
-		is_slave = true;
-
 		if (slave->status != SDW_SLAVE_ATTACHED &&
 		    slave->status != SDW_SLAVE_ALERT)
 			continue;
+
+		/* Identify if Slave(s) are available on Bus */
+		is_slave = true;
 
 		mode = slave->curr_clk_stop_mode;
 
@@ -980,6 +990,13 @@ int sdw_bus_exit_clk_stop(struct sdw_bus *bus)
 
 	if (is_slave && !simple_clk_stop)
 		sdw_bus_wait_for_clk_prep_deprep(bus, SDW_BROADCAST_DEV_NUM);
+
+	/*
+	 * Don't need to call slave callback function if there is no slave
+	 * attached
+	 */
+	if (!is_slave)
+		return 0;
 
 	list_for_each_entry(slave, &bus->slaves, node) {
 		if (!slave->dev_num)

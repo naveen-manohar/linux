@@ -164,6 +164,9 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_RT5670 if I2C
 	select SND_SOC_RT5677 if I2C && SPI_MASTER
 	select SND_SOC_RT5682 if I2C
+	select SND_SOC_RT700_SDW if SOUNDWIRE
+	select SND_SOC_RT711_SDW if SOUNDWIRE
+	select SND_SOC_RT715_SDW if SOUNDWIRE
 	select SND_SOC_SGTL5000 if I2C
 	select SND_SOC_SI476X if MFD_SI476X_CORE
 	select SND_SOC_SIMPLE_AMPLIFIER
@@ -919,6 +922,7 @@ config SND_SOC_RL6231
 	default y if SND_SOC_RT5670=y
 	default y if SND_SOC_RT5677=y
 	default y if SND_SOC_RT5682=y
+	default y if SND_SOC_RT5682_SDW=y
 	default y if SND_SOC_RT1011=y
 	default y if SND_SOC_RT1015=y
 	default y if SND_SOC_RT1305=y
@@ -961,6 +965,12 @@ config SND_SOC_RT286
 config SND_SOC_RT298
 	tristate
 	depends on I2C
+
+config SND_SOC_RT5682_SDW
+	tristate "Realtek RT5682 Codec - SDW"
+	depends on SOUNDWIRE
+	select SND_SOC_RT5682
+	select REGMAP_SOUNDWIRE
 
 config SND_SOC_RT1011
 	tristate
@@ -1030,6 +1040,33 @@ config SND_SOC_RT5677_SPI
 
 config SND_SOC_RT5682
 	tristate
+
+config SND_SOC_RT700
+	tristate
+
+config SND_SOC_RT700_SDW
+	tristate "Realtek RT700 Codec - SDW"
+	depends on SOUNDWIRE
+	select SND_SOC_RT700
+	select REGMAP_SOUNDWIRE
+
+config SND_SOC_RT711
+	tristate
+
+config SND_SOC_RT711_SDW
+	tristate "Realtek RT711 Codec - SDW"
+	depends on SOUNDWIRE
+	select SND_SOC_RT711
+	select REGMAP_SOUNDWIRE
+
+config SND_SOC_RT715
+	tristate
+
+config SND_SOC_RT715_SDW
+	tristate "Realtek RT715 Codec - SDW"
+	depends on SOUNDWIRE
+	select SND_SOC_RT715
+	select REGMAP_SOUNDWIRE
 
 #Freescale sgtl5000 codec
 config SND_SOC_SGTL5000
