@@ -210,7 +210,7 @@ static struct sof_sdw_codec_info codec_info_list[] = {
 	},
 	{
 		.id = 0x8373,
-		.direction = {true, true},
+		.direction = {true, false},
 		.dai_name = "max98373-aif1",
 		.init = sof_sdw_mx8373_init,
 	},
@@ -322,6 +322,7 @@ static void init_dai_link(struct snd_soc_dai_link *dai_links, int be_id,
 {
 	dai_links->id = be_id;
 	dai_links->name = name;
+	 printk("naveen dai_links->id = %d, dai_links->name = %s %s %d\n", dai_links->id, dai_links->name,__func__, __LINE__);
 	dai_links->platforms = platform_component;
 	dai_links->num_platforms = ARRAY_SIZE(platform_component);
 	dai_links->nonatomic = true;
@@ -636,7 +637,6 @@ static int create_sdw_dailink(struct device *dev, int *be_index,
 			      cpus + *cpu_id, cpu_dai_num,
 			      codecs, codec_num,
 			      NULL, &sdw_ops);
-
 		ret = set_codec_init_func(link, dai_links + (*be_index)++,
 					  playback);
 		if (ret < 0) {
