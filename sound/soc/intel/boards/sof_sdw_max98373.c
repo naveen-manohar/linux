@@ -29,7 +29,8 @@ static const struct snd_kcontrol_new mx8373_controls[] = {
 static int spk_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
-	int ret;
+	struct snd_soc_dai *codec_dai;
+	int i, ret;
 
 	card->components = devm_kasprintf(card->dev, GFP_KERNEL,
 					  "%s spk:mx8373",
@@ -54,6 +55,17 @@ static int spk_init(struct snd_soc_pcm_runtime *rtd)
 	ret = snd_soc_dapm_add_routes(&card->dapm, mx8373_map, 2);
 	if (ret)
 		dev_err(rtd->dev, "failed to add first SPK map: %d\n", ret);
+
+	for_each_rtd_codec_dais(rtd, i, codec_dai) {
+		if (!strcmp(codec_dai->component->name, "sdw:1:19f:8373:0:3")) {
+			/* DEV0 tdm slot configuration */
+			snd_soc_dai_set_tdm_slot(codec_dai, 3, 3, 2, 32);
+		}
+		if (!strcmp(codec_dai->component->name, "sdw:1:19f:8373:0:7")) {
+			/* DEV1 tdm slot configuration */
+			snd_soc_dai_set_tdm_slot(codec_dai, 3, 3, 2, 32);
+		}
+	}
 
 	return ret;
 }
