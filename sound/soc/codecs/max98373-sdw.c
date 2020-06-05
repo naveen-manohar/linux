@@ -615,8 +615,13 @@ static int max98373_sdw_dai_hw_params(struct snd_pcm_substream *substream,
 	stream_config.direction = direction;
 
 	if (max98373->slot) {
-		stream_config.ch_count = max98373->slot;
-		port_config.ch_mask = max98373->rx_mask;
+		if (direction == SDW_DATA_DIR_RX) {
+			stream_config.ch_count = hweight_long(max98373->rx_mask);
+			port_config.ch_mask = max98373->rx_mask;
+		} else {
+			stream_config.ch_count = hweight_long(max98373->tx_mask);
+			port_config.ch_mask = max98373->tx_mask;
+		}
 	} else {
 		stream_config.ch_count = params_channels(params);
 		port_config.ch_mask = GENMASK(stream_config.ch_count - 1, 0);
@@ -780,6 +785,7 @@ static int max98373_sdw_set_tdm_slot(struct snd_soc_dai *dai,
 		max98373->tdm_mode = true;
 
 	max98373->rx_mask = rx_mask;
+	max98373->tx_mask = tx_mask;
 	max98373->slot = slots;
 
 	return 0;
