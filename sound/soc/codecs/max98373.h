@@ -218,6 +218,7 @@ struct max98373_priv {
 	bool pm_init_once;
 	int slot;
 	unsigned int rx_mask;
+	unsigned int tx_mask;
 };
 
 extern const struct snd_soc_component_driver soc_codec_dev_max98373_sdw;
